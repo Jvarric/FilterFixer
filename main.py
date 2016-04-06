@@ -1,6 +1,6 @@
 import re
 
-#REGEX = re.compile(r'(?:(.+?),(.*),(.+))')
+REGEX = re.compile(r'(?:(.+?),(.*),(.+))')
 
 
 def main():
@@ -10,7 +10,7 @@ def main():
     for line in filters:
         print(line, end="")
         line = line.rstrip()
-        match = re.match(r'(?:(.+?),(.*),(.+))', line)
+        match = REGEX.match(line)
 
         if match:
             print("The matches are: {}".format(match.groups()))
