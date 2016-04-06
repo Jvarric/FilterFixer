@@ -1,0 +1,3 @@
+this is a test,comment,block
+another test,"with, comments, like this",tag
+email@domain.com,,block
