@@ -1,6 +1,6 @@
 import re
 
-REGEX = re.compile(r'(?:(.+?),(.*),(.+))')
+REGEX = re.compile(r'((.+?),(.*),(.+))')
 
 
 def main():
