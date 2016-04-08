@@ -18,19 +18,29 @@ def combineSender(input):
         try:
             match = sender_block.match(line)
             if match:
-                print("block - {}".format(match.groups()))
+                # print("block - {}".format(match.groups()))
                 # Join pattern, action, and comment in proper order, ensuring action is lowercase
-                post_match = ''.join(match.group(1)) + "," + match.group(3).lower() + "," + ''.join(match.group(2))
+                action = ''.join(match.group(3))
+                action = action.lower()
+
+                # If action was tag, change to quarantine
+                if action == "tag":
+                    action = "quarantine"
+
+                # Reorder line to match BESS formatting
+                match = ''.join(match.group(1)) + "," + action + "," + ''.join(match.group(2))
             else:
                 match = sender_allow.match(line)
-                print("allow - {}".format(match.groups()))
-                post_match = ','.join(match.group(1, 2))
+                # print("allow - {}".format(match.groups()))
+                match = ''.join(match.group(1)) + ",exempt," + ''.join(match.group(2))
         except:
             e = sys.exc_info()
             print("Not a sender filter. Check formatting. Error: {}".format(e))
-        out.append(post_match)
 
-    return out;
+        # Save newly formatted line
+        out.append(match)
+
+    return out
 
 
 def recipient():
