@@ -40,6 +40,9 @@ def combineSender(input):
         # Save newly formatted line
         out.append(match)
 
+    # Sort list before returning
+    out.sort()
+
     return out
 
 
@@ -61,7 +64,7 @@ def main():
 
     output = combineSender(filters)
 
-    print(output)
+    print('\n'.join(output))
 '''
     for line in filters:
         print(line, end="")
