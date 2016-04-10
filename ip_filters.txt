@@ -1,0 +1,25 @@
+IP Allow
+
+New IP Address,Subnet Mask,Comment
+207.70.144.130,255.255.255.255,Unetek Mail Server
+168.215.191.210,255.255.255.255,Godish Mail Server
+168.215.191.214,255.255.255.255,GodishMailServer2
+69.65.119.155,255.255.255.255,Hallaron Advertising
+67.18.59.0,255.255.255.0,HostGator Mail Server
+192.185.141.170,255.255.255.255,Hostgator
+199.227.167.40,255.255.255.255,Godish request
+
+
+IP Block
+
+IP/Network Address,Netmask,Action,Comment
+10.240.156.120,255.255.255.248,Quarantine,Johhnson Spam
+123.6.135.0,255.255.255.0,Block,China Spammer
+197.243.37.0,255.255.255.0,Block,
+58.101.149.167,255.255.255.255,Block,China Spammer
+115.28.205.15,255.255.255.255,Block,Chinese Spammer
+58.100.4.58,255.255.255.255,Block,Spammer1
+123.158.33.99,255.255.255.255,Block,Spammer2
+69.140.102.213,255.255.255.255,Block,Spammer3
+212.54.89.105,255.255.255.255,Block,Spammer4
+183.78.103.68,255.255.255.255,Block,Spammer5

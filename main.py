@@ -1,60 +1,96 @@
-import sys
+import socket
 import re
 
 REGEX = re.compile(r'(.+?),(.*),(.+)')
 
 
-def ip():
-    pass
+def ip_gateway_to_service(filters):
+    ip = re.compile(r'''
+        (?P<ip>                         # Start IP section
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+        (?P<netmask>                    # Start netmask section
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
+        (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+        (?:(?P<action>.+),)?            # Action to take if blocklist entry
+        (?P<comment>.*)''',             # Optional comment
+                    re.I | re.X)
+    my_list = []
+
+    for line in filters:
+        # Strip newline character
+        line = line.rstrip()
+        match = ip.match(line)
+
+        if match:
+            if match.group('action') is None:
+                action = "exempt"
+            else:
+                # Pull action line into a string as lowercase
+                action = ''.join(match.group('action'))
+                action = action.lower()
+
+            # If action was tag or quarantine, set to block since BESS doesn't support tag or quarantine
+            if (action == "tag") or (action == "quarantine"):
+                action = "block"
+
+            # Join back into a single line matching BESS formatting
+            match = ','.join(match.group('ip', 'netmask')) + "," + action + "," + ''.join(match.group('comment'))
+
+            # Add newly formatted line to list
+            my_list.append(match)
+
+    # Remove None entries from list and sort
+    list(filter(None.__ne__, my_list))
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
+
+    return my_list
 
 
 def sender_gateway_to_service(filters):
     sender_allow = re.compile(r'(.+?),(.*)', re.I)
     sender_block = re.compile(r'(.+?),(.*),(block|quarantine|tag)', re.I)
-    formatted_list = []
-    match = []
+    my_list = []
 
     for line in filters:
         # Strip newline character
         line = line.rstrip()
-        try:
-            match = sender_block.match(line)
-            if match:
-                # print("block - {}".format(match.groups()))
-                # Join pattern, action, and comment in proper order, ensuring action is lowercase
-                action = ''.join(match.group(3))
-                action = action.lower()
+        match = sender_block.match(line)
+        if match:
+            # Join pattern, action, and comment in proper order, ensuring action is lowercase
+            action = ''.join(match.group(3))
+            action = action.lower()
 
-                # If action was tag, change to quarantine since BESS doesn't support tag
-                if action == "tag":
-                    action = "quarantine"
+            # If action was tag, change to quarantine since BESS doesn't support tag
+            if action == "tag":
+                action = "quarantine"
 
-                # Reorder line to match BESS formatting
-                match = ''.join(match.group(1)) + "," + action + "," + ''.join(match.group(2))
-            else:
-                match = sender_allow.match(line)
-                # print("allow - {}".format(match.groups()))
-                # Reorder line to match BESS formatting
-                match = ''.join(match.group(1)) + ",exempt," + ''.join(match.group(2))
-        # !!COME BACK TO THIS LATER!!
-        except:
-            e = sys.exc_info()
-            print("Not a sender filter. Check formatting. Error: {}".format(e))
+            # Join back into a single line matching BESS formatting
+            match = ''.join(match.group(1)) + "," + action + "," + ''.join(match.group(2))
+        else:
+            match = sender_allow.match(line)
+            # Join back into a single line matching BESS formatting
+            match = ''.join(match.group(1)) + ",exempt," + ''.join(match.group(2))
 
-        # Save newly formatted line
-        formatted_list.append(match)
+        # Add newly formatted line to list
+        my_list.append(match)
 
-    # Sort list before returning
-    formatted_list.sort()
+    # Remove None from list entries and sort
+    list(filter(None.__ne__, my_list))
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
 
-    return formatted_list
+    return my_list
 
 
-def recipient_gateway_to_service():
+def recip_gateway_to_service():
     pass
 
 
-def attachment_gateway_to_service():
+def attach_gateway_to_service():
     pass
 
 
@@ -63,21 +99,28 @@ def content_gateway_to_service():
 
 
 def main():
-    with open('sender_filters.txt') as my_file:
+
+    print('What filter do you want to test?')
+    i = input()
+
+    if i == "sender":
+        file = "sender_filters.txt"
+    elif i == "ip":
+        file = "ip_filters.txt"
+    else:
+        exit()
+    with open(file) as my_file:
         filters = my_file.readlines()
 
-    output = sender_gateway_to_service(filters)
+    if i == "sender":
+        output = sender_gateway_to_service(filters)
+        print('Email Address,"Policy (block, exempt, quarantine)",Comment (optional)')
+    elif i == "ip":
+        output = ip_gateway_to_service(filters)
+        print('IP Address,Netmask,"Policy (block, exempt)",Comment (optional)')
+    else:
+        exit()
 
     print('\n'.join(output))
-'''
-    for line in filters:
-        print(line, end="")
-        line = line.rstrip()
-        match = REGEX.match(line)
-
-        if match:
-            print("The matches are: {}".format(match.groups()))
-            print("The re-ordered filter is: {}\n".format(', '.join(match.group(0, 1, 2, 3)) + ",blah"))
-'''
 
 main()
