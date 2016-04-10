@@ -1,4 +1,3 @@
-import socket
 import re
 
 REGEX = re.compile(r'(.+?),(.*),(.+)')
