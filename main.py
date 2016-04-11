@@ -5,18 +5,18 @@ REGEX = re.compile(r'(.+?),(.*),(.+)')
 
 def ip_gateway_to_service(filters):
     ip = re.compile(r'''
-        (?P<ip>                         # Start IP section
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
-        (?P<netmask>                    # Start netmask section
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
-        (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
-        (?:(?P<action>.+),)?            # Action to take if blocklist entry
-        (?P<comment>.*)''',             # Optional comment
+                    (?P<ip>                         # Start IP section
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+                    (?P<netmask>                    # Start netmask section
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+                    (?:(?P<action>.+),)?            # Action to take if blocklist entry
+                    (?P<comment>.*)''',             # Optional comment
                     re.I | re.X)
     my_list = []
 
@@ -93,8 +93,47 @@ def attach_gateway_to_service():
     pass
 
 
-def content_gateway_to_service():
-    pass
+def content_gateway_to_service(filters):
+    content = re.compile(r'''
+                         (?P<pattern>.+),                                         # Pattern
+                         (?P<comment>.*),                                         # Comment
+                         (?P<action>Block|Quarantine|Tag|Whitelist|Off),          # Inbound action
+                         (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect), # Outbound action
+                         (?P<subject>[01]),                                       # Apply to subject
+                         (?P<header>[01]),                                        # Apply to header
+                         (?P<body>[01])''',                                       # Apply to body
+                         re.I | re.X)
+    my_list = []
+
+    for line in filters:
+        # Strip newline character
+        line = line.rstrip()
+        match = content.match(line)
+        if match:
+            # Join pattern, action, and comment in proper order, ensuring action is lowercase
+            action = ''.join(match.group('action'))
+            action = action.lower()
+
+            # If action was tag, change to quarantine since BESS doesn't support tag
+            if action == "tag":
+                action = "quarantine"
+            elif action == "whitelist":
+                action = "allow"
+            elif action == "off":
+                break
+
+            # Join back into a single line matching BESS formatting and add entries for attachment, sender, recip
+            match = ','.join(match.group('pattern', 'comment')) + "," + action + "," \
+                    + ','.join(match.group('subject', 'header', 'body')) + ",0,0,0"
+
+        # Add newly formatted line to list
+        my_list.append(match)
+
+    # Remove None from list entries and sort
+    list(filter(None.__ne__, my_list))
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
+
+    return my_list
 
 
 def main():
@@ -106,6 +145,8 @@ def main():
         file = "sender_filters.txt"
     elif i == "ip":
         file = "ip_filters.txt"
+    elif i == "content":
+        file = "content_filters.txt"
     else:
         exit()
     with open(file) as my_file:
@@ -117,6 +158,10 @@ def main():
     elif i == "ip":
         output = ip_gateway_to_service(filters)
         print('IP Address,Netmask,"Policy (block, exempt)",Comment (optional)')
+    elif i == "content":
+        output = content_gateway_to_service(filters)
+        print('Pattern (regular expression),Action (block/allow/quarantine),"Match Filter (Comma-separated list of: \
+               subject, headers, body, attachments, sender, recipient)"')
     else:
         exit()
 
