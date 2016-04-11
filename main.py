@@ -1,7 +1,5 @@
 import re
 
-REGEX = re.compile(r'(.+?),(.*),(.+)')
-
 
 def ip_gateway_to_service(filters):
     ip = re.compile(r'''
@@ -126,8 +124,8 @@ def content_gateway_to_service(filters):
             match = ','.join(match.group('pattern', 'comment')) + "," + action + "," \
                     + ','.join(match.group('subject', 'header', 'body')) + ",0,0,0"
 
-        # Add newly formatted line to list
-        my_list.append(match)
+            # Add newly formatted line to list
+            my_list.append(match)
 
     # Remove None from list entries and sort
     list(filter(None.__ne__, my_list))
@@ -149,7 +147,7 @@ def main():
         file = "content_filters.txt"
     else:
         exit()
-    with open(file) as my_file:
+    with open(file, encoding='utf-8') as my_file:
         filters = my_file.readlines()
 
     if i == "sender":
@@ -160,8 +158,8 @@ def main():
         print('IP Address,Netmask,"Policy (block, exempt)",Comment (optional)')
     elif i == "content":
         output = content_gateway_to_service(filters)
-        print('Pattern (regular expression),Action (block/allow/quarantine),"Match Filter (Comma-separated list of: \
-               subject, headers, body, attachments, sender, recipient)"')
+        print('Pattern (regular expression),Action (block/allow/quarantine),"Match Filter (Comma-separated list of: '
+              'subject, headers, body, attachments, sender, recipient)"')
     else:
         exit()
 
