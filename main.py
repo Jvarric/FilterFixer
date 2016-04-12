@@ -25,18 +25,18 @@ def ip_gateway_to_service(filters):
 
         if match:
             if match.group('action') is None:
-                action = "exempt"
+                action = 'exempt'
             else:
                 # Pull action line into a string as lowercase
                 action = ''.join(match.group('action'))
                 action = action.lower()
 
             # If action was tag or quarantine, set to block since BESS doesn't support tag or quarantine
-            if (action == "tag") or (action == "quarantine"):
-                action = "block"
+            if (action == 'tag') or (action == 'quarantine'):
+                action = 'block'
 
             # Join back into a single line matching BESS formatting
-            match = ','.join(match.group('ip', 'netmask')) + "," + action + "," + ''.join(match.group('comment'))
+            match = ','.join(match.group('ip', 'netmask')) + ',' + action + ',' + ''.join(match.group('comment'))
 
             # Add newly formatted line to list
             my_list.append(match)
@@ -63,15 +63,15 @@ def sender_gateway_to_service(filters):
             action = action.lower()
 
             # If action was tag, change to quarantine since BESS doesn't support tag
-            if action == "tag":
-                action = "quarantine"
+            if action == 'tag':
+                action = 'quarantine'
 
             # Join back into a single line matching BESS formatting
-            match = ''.join(match.group(1)) + "," + action + "," + ''.join(match.group(2))
+            match = ''.join(match.group(1)) + ',' + action + ',' + ''.join(match.group(2))
         else:
             match = sender_allow.match(line)
             # Join back into a single line matching BESS formatting
-            match = ''.join(match.group(1)) + ",exempt," + ''.join(match.group(2))
+            match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
 
         # Add newly formatted line to list
         my_list.append(match)
@@ -113,16 +113,16 @@ def content_gateway_to_service(filters):
             action = action.lower()
 
             # If action was tag, change to quarantine since BESS doesn't support tag
-            if action == "tag":
-                action = "quarantine"
-            elif action == "whitelist":
-                action = "allow"
-            elif action == "off":
+            if action == 'tag':
+                action = 'quarantine'
+            elif action == 'whitelist':
+                action = 'allow'
+            elif action == 'off':
                 break
 
             # Join back into a single line matching BESS formatting and add entries for attachment, sender, recip
-            match = ','.join(match.group('pattern', 'comment')) + "," + action + "," \
-                    + ','.join(match.group('subject', 'header', 'body')) + ",0,0,0"
+            match = ','.join(match.group('pattern', 'comment')) + ',' + action + ',' + \
+                    ','.join(match.group('subject', 'header', 'body')) + ',0,0,0'
 
             # Add newly formatted line to list
             my_list.append(match)
@@ -139,24 +139,24 @@ def main():
     print('What filter do you want to test?')
     i = input()
 
-    if i == "sender":
-        file = "sender_filters.txt"
-    elif i == "ip":
-        file = "ip_filters.txt"
-    elif i == "content":
-        file = "content_filters.txt"
+    if i == 'sender':
+        file = 'sender_filters.txt'
+    elif i == 'ip':
+        file = 'ip_filters.txt'
+    elif i == 'content':
+        file = 'content_filters.txt'
     else:
         exit()
     with open(file, encoding='utf-8') as my_file:
         filters = my_file.readlines()
 
-    if i == "sender":
+    if i == 'sender':
         output = sender_gateway_to_service(filters)
         print('Email Address,"Policy (block, exempt, quarantine)",Comment (optional)')
-    elif i == "ip":
+    elif i == 'ip':
         output = ip_gateway_to_service(filters)
         print('IP Address,Netmask,"Policy (block, exempt)",Comment (optional)')
-    elif i == "content":
+    elif i == 'content':
         output = content_gateway_to_service(filters)
         print('Pattern (regular expression),Action (block/allow/quarantine),"Match Filter (Comma-separated list of: '
               'subject, headers, body, attachments, sender, recipient)"')
