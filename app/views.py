@@ -1,5 +1,7 @@
-from flask import render_template
+from flask import render_template, request
 from app import app
+from FilterFixer import ip_gateway_to_service, sender_gateway_to_service, recip_gateway_to_service, \
+    content_gateway_to_service, attach_gateway_to_service
 
 @app.route('/')
 @app.route('/index')
@@ -7,36 +9,56 @@ def index():
     return render_template('index.html')
 
 
-@app.route('/send')
-@app.route('/sender')
+@app.route('/ip', methods=['GET', 'POST'])
+def ip():
+    title = 'IP filters'
+    if request.method == 'POST':
+        data = request.form['filters']
+        converted_data = ip_gateway_to_service(data)
+        return render_template('ip.html', title=title, output=converted_data)
+    return render_template('ip.html', title=title, output='')
+
+
+@app.route('/send', methods=['GET', 'POST'])
+@app.route('/sender', methods=['GET', 'POST'])
 def sender():
     title = 'Sender filters'
+    if request.method == 'POST':
+        data = request.form['filters']
+        converted_data = sender_gateway_to_service(data)
+        return render_template('sender.html', title=title, output=converted_data)
     return render_template('sender.html', title=title)
 
 
-@app.route('/recip')
-@app.route('/recipient')
+@app.route('/recip', methods=['GET', 'POST'])
+@app.route('/recipient', methods=['GET', 'POST'])
 def recipient():
     title = 'Recipient filters'
+    if request.method == 'POST':
+        data = request.form['filters']
+        converted_data = recip_gateway_to_service(data)
+        return render_template('recipient.html', title=title, output=converted_data)
     return render_template('recipient.html', title=title)
 
 
-@app.route('/ip')
-def ip():
-    title = 'IP filters'
-    return render_template('ip.html', title=title)
-
-
-@app.route('/content')
+@app.route('/content', methods=['GET', 'POST'])
 def content():
     title = 'Content filters'
+    if request.method == 'POST':
+        data = request.form['filters']
+        converted_data = content_gateway_to_service(data)
+        return render_template('content.html', title=title, output=converted_data)
     return render_template('content.html', title=title)
 
 
-@app.route('/attach')
-@app.route('/attachment')
+@app.route('/attach', methods=['GET', 'POST'])
+@app.route('/attachment', methods=['GET', 'POST'])
 def attachment():
     title = 'Attachment filters'
+    if request.method == 'POST':
+        data = request.form['filters']
+        converted_data = attach_gateway_to_service(data)
+        return render_template('attachment.html', title=title, output=converted_data)
     return render_template('attachment.html', title=title)
 
 

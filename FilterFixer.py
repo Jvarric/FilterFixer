@@ -18,7 +18,9 @@ def ip_gateway_to_service(filters):
                     re.I | re.X)
     my_list = []
 
-    for line in filters:
+    my_filters = filters.splitlines()
+
+    for line in my_filters:
         # Strip newline character
         line = line.rstrip()
         match = ip.match(line)
@@ -37,15 +39,17 @@ def ip_gateway_to_service(filters):
 
             # Join back into a single line matching BESS formatting
             match = ','.join(match.group('ip', 'netmask')) + ',' + action + ',' + ''.join(match.group('comment'))
-
-            # Add newly formatted line to list
             my_list.append(match)
 
     # Remove None entries from list and sort
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
 
-    return my_list
+    output = '\n'.join(my_list)
+    if output == '':
+        return "Go back and check for improper formatting"
+
+    return output
 
 
 def sender_gateway_to_service(filters):
@@ -53,42 +57,81 @@ def sender_gateway_to_service(filters):
     sender_block = re.compile(r'(.+?),(.*),(block|quarantine|tag)', re.I)
     my_list = []
 
-    for line in filters:
-        # Strip newline character
-        line = line.rstrip()
-        match = sender_block.match(line)
-        if match:
-            # Join pattern, action, and comment in proper order, ensuring action is lowercase
-            action = ''.join(match.group(3))
-            action = action.lower()
+    my_filters = filters.splitlines()
 
-            # If action was tag, change to quarantine since BESS doesn't support tag
-            if action == 'tag':
-                action = 'quarantine'
+    for line in my_filters:
+        try:
+            # Strip newline character
+            line = line.rstrip()
+            if line == 'Email Address/Domain,Comment' or line == 'Email Address/Domain,Comment,Action':
+                continue
+            match = sender_block.match(line)
 
-            # Join back into a single line matching BESS formatting
-            match = ''.join(match.group(1)) + ',' + action + ',' + ''.join(match.group(2))
-        else:
-            match = sender_allow.match(line)
-            # Join back into a single line matching BESS formatting
-            match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
+            if match:
+                # Join pattern, action, and comment in proper order, ensuring action is lowercase
+                action = ''.join(match.group(3))
+                action = action.lower()
 
-        # Add newly formatted line to list
-        my_list.append(match)
+                # If action was tag, change to quarantine since BESS doesn't support tag
+                if action == 'tag':
+                    action = 'quarantine'
+
+                # Join back into a single line matching BESS formatting
+                match = ''.join(match.group(1)) + ',' + action + ',' + ''.join(match.group(2))
+            else:
+                match = sender_allow.match(line)
+                # Join back into a single line matching BESS formatting
+                match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
+
+            my_list.append(match)
+
+        except AttributeError:
+            return "Go back and check for improper formatting"
 
     # Remove None from list entries and sort
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
 
-    return my_list
+    output = '\n'.join(my_list)
+
+    return output
 
 
-def recip_gateway_to_service():
-    pass
+def recip_gateway_to_service(filters):
+    recip_allow = re.compile(r'(.+?),(.*)', re.I)
+    recip_block = re.compile(r'(.+?),(.+),(.*)', re.I)
+    my_list = []
+
+    my_filters = filters.splitlines()
+
+    for line in my_filters:
+        try:
+            if line == 'Email Address/Domain,Comment' or line == 'Email Address/Domain,Action,Comment':
+                continue
+            match = recip_block.match(line)
+            if match:
+                continue
+
+            match = recip_allow.match(line)
+            if match:
+                # Join pattern, action, and comment in proper order, ensuring action is lowercase
+                match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
+                my_list.append(match)
+
+        except AttributeError:
+            return "Go back and check for improper formatting"
+
+    # Remove None from list entries and sort
+    list(filter(None.__ne__, my_list))
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
+
+    output = '\n'.join(my_list)
+
+    return output
 
 
-def attach_gateway_to_service():
-    pass
+def attach_gateway_to_service(filters):
+    return "This function not available"
 
 
 def content_gateway_to_service(filters):
@@ -103,10 +146,13 @@ def content_gateway_to_service(filters):
                          re.I | re.X)
     my_list = []
 
-    for line in filters:
+    my_filters = filters.splitlines()
+
+    for line in my_filters:
         # Strip newline character
         line = line.rstrip()
         match = content.match(line)
+
         if match:
             # Join pattern, action, and comment in proper order, ensuring action is lowercase
             action = ''.join(match.group('action'))
@@ -131,7 +177,9 @@ def content_gateway_to_service(filters):
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
 
-    return my_list
+    output = '\n'.join(my_list)
+
+    return output
 
 
 def main():
@@ -162,8 +210,6 @@ def main():
               'subject, headers, body, attachments, sender, recipient)"')
     else:
         exit()
-
-    print('\n'.join(output))
 
 if __name__ == "__main__":
     main()
