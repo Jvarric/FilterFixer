@@ -13,7 +13,7 @@ def index():
 def ip():
     title = 'IP filters'
     if request.method == 'POST':
-        data = request.form['filters']
+        data = request.form['filter-input']
         converted_data = ip_gateway_to_service(data)
         return render_template('ip.html', title=title, output=converted_data)
     return render_template('ip.html', title=title, output='')
@@ -24,7 +24,7 @@ def ip():
 def sender():
     title = 'Sender filters'
     if request.method == 'POST':
-        data = request.form['filters']
+        data = request.form['filter-input']
         converted_data = sender_gateway_to_service(data)
         return render_template('sender.html', title=title, output=converted_data)
     return render_template('sender.html', title=title)
@@ -35,7 +35,7 @@ def sender():
 def recipient():
     title = 'Recipient filters'
     if request.method == 'POST':
-        data = request.form['filters']
+        data = request.form['filter-input']
         converted_data = recip_gateway_to_service(data)
         return render_template('recipient.html', title=title, output=converted_data)
     return render_template('recipient.html', title=title)
@@ -45,7 +45,7 @@ def recipient():
 def content():
     title = 'Content filters'
     if request.method == 'POST':
-        data = request.form['filters']
+        data = request.form['filter-input']
         converted_data = content_gateway_to_service(data)
         return render_template('content.html', title=title, output=converted_data)
     return render_template('content.html', title=title)
@@ -56,7 +56,7 @@ def content():
 def attachment():
     title = 'Attachment filters'
     if request.method == 'POST':
-        data = request.form['filters']
+        data = request.form['filter-input']
         converted_data = attach_gateway_to_service(data)
         return render_template('attachment.html', title=title, output=converted_data)
     return render_template('attachment.html', title=title)

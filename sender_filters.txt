@@ -1,5 +1,0 @@
-me@me.com,
-gmail.com,everyone at gmail
-block@domain.com,comment,Block
-another@test.com,keyboard,Tag
-email@address.com,"This, is, a, comment",Quarantine

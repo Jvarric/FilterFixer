@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block nav %}
+	<li><a href="{{ url_for('ip') }}">IP Filters</a></li>
+	<li><a href="{{ url_for('sender') }}">Sender Filters</a></li>
+	<li><a href="{{ url_for('recipient') }}">Recipient Filters</a></li>
+	<li><a href="{{ url_for('content') }}">Content Filters</a></li>
+	<li class="active"><a href="{{ url_for('attachment') }}">Attachment Filters</a></li>
+{% endblock %}
+
+{% block content %}
+	<h2>Attachment</h2><br>
+	<div class="filters" style="display: flex;">
+		<div>
+			<form method="post" name="form">
+				<textarea name="filter-input" rows="15" cols="55" placeholder="Enter filters">{{ output }}</textarea><br>
+				<input class="btn btn-primary" type="submit" value="Convert">
+			</form>
+		</div>
+		<div>
+			<ul>
+				<li>
+					<b>Required formatting:</b><br>
+					Filename Pattern,Comment,Inbound,Outbound,Check Archives
+				</li>
+			</ul>
+		</div>
+	</div>
+{% endblock %}

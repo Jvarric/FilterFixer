@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block nav %}
+	<li><a href="{{ url_for('ip') }}">IP Filters</a></li>
+	<li><a href="{{ url_for('sender') }}">Sender Filters</a></li>
+	<li><a href="{{ url_for('recipient') }}">Recipient Filters</a></li>
+	<li><a href="{{ url_for('content') }}">Content Filters</a></li>
+	<li><a href="{{ url_for('attachment') }}">Attachment Filters</a></li>
+{% endblock %}
+
+{% block content %}
+	<h2>Easily migrate filters from BESG to BESS</h2>
+	<p>This site will assist in converting various filters from Email Security Gateway formatting to the formatting used by the Email Security Service.</p>
+
+	<h2>How To:</h2>
+	<p>To convert a filter for BESS simply copy the existing filters from the Bulk Edit window of the Gateway and paste them into the text box on the corresponding filter's page and hit Convert. The filters will be converted to the new formatting and sorted.*</p>
+
+	<p class="note">*</p><p class="note" style="font-size: small">Duplicate entries are not removed at this time, however the converted list will be sorted for easy locating of possible duplicate entries.</p>
+{% endblock %}
