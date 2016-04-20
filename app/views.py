@@ -1,7 +1,8 @@
 from flask import render_template, request
 from app import app
-from FilterFixer import ip_gateway_to_service, sender_gateway_to_service, recip_gateway_to_service, \
+from filter_fixer import ip_gateway_to_service, sender_gateway_to_service, recip_gateway_to_service, \
     content_gateway_to_service, attach_gateway_to_service
+
 
 @app.route('/')
 @app.route('/index')
@@ -60,5 +61,3 @@ def attachment():
         converted_data = attach_gateway_to_service(data)
         return render_template('attachment.html', title=title, output=converted_data)
     return render_template('attachment.html', title=title)
-
-

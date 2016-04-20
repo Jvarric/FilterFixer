@@ -7,17 +7,17 @@ import re
 def ip_gateway_to_service(filters):
     ip = re.compile(r'''
                     (?P<ip>                         # Start IP section
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),
                     (?P<netmask>                    # Start netmask section
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab first octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab second octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d).   # Grab third octet
-                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),  # Grab last octet
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                    (?:25[0-5]|2[0-4]\d|1?\d?\d)),
                     (?:(?P<action>.+),)?            # Action to take if blocklist entry
-                    (?P<comment>.*)''',             # Optional comment
+                    (?P<comment>.*)''',
                     re.I | re.X)
     my_list = []
 
@@ -47,7 +47,6 @@ def ip_gateway_to_service(filters):
     # Remove None entries from list and sort
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-
     output = '\n'.join(my_list)
     if output == '':
         return "No results. Go back and check for improper formatting"
@@ -92,7 +91,6 @@ def sender_gateway_to_service(filters):
     # Remove None from list entries and sort
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-
     output = '\n'.join(my_list)
     if output == '':
         return "No results. Go back and check for improper formatting"
@@ -112,6 +110,7 @@ def recip_gateway_to_service(filters):
             continue
         match = recip_block.match(line)
         if match:
+            # Recipient blocks are not accepted
             continue
 
         match = recip_allow.match(line)
@@ -123,7 +122,6 @@ def recip_gateway_to_service(filters):
     # Remove None from list entries and sort
     list(filter(None.__ne__, my_list))
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-
     output = '\n'.join(my_list)
     if output == '':
         return "No results. Go back and check for improper formatting"
@@ -137,8 +135,8 @@ def attach_gateway_to_service(filters):
 
 def content_gateway_to_service(filters):
     content = re.compile(r'''
-                         (?P<pattern>.+),                                         # Pattern
-                         (?P<comment>.*),                                         # Comment
+                         (?P<pattern>.+),
+                         (?P<comment>.*),
                          (?P<action>Block|Quarantine|Tag|Whitelist|Off),          # Inbound action
                          (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect), # Outbound action
                          (?P<subject>[01]),                                       # Apply to subject
@@ -146,7 +144,6 @@ def content_gateway_to_service(filters):
                          (?P<body>[01])''',                                       # Apply to body
                          re.I | re.X)
     my_list = []
-
     my_filters = filters.splitlines()
 
     for line in my_filters:
@@ -186,33 +183,8 @@ def content_gateway_to_service(filters):
 
 
 def main():
-
-    print('What filter do you want to test?')
-    i = input()
-
-    if i == 'sender':
-        file = 'sender_filters.txt'
-    elif i == 'ip':
-        file = 'ip_filters.txt'
-    elif i == 'content':
-        file = 'content_filters.txt'
-    else:
-        exit()
-    with open(file, encoding='utf-8') as my_file:
-        filters = my_file.readlines()
-
-    if i == 'sender':
-        output = sender_gateway_to_service(filters)
-        print('Email Address,"Policy (block, exempt, quarantine)",Comment (optional)')
-    elif i == 'ip':
-        output = ip_gateway_to_service(filters)
-        print('IP Address,Netmask,"Policy (block, exempt)",Comment (optional)')
-    elif i == 'content':
-        output = content_gateway_to_service(filters)
-        print('Pattern (regular expression),Action (block/allow/quarantine),"Match Filter (Comma-separated list of: '
-              'subject, headers, body, attachments, sender, recipient)"')
-    else:
-        exit()
+    # Nope
+    pass
 
 if __name__ == "__main__":
     main()
