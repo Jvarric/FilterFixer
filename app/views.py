@@ -1,7 +1,7 @@
 from flask import render_template, request
 from app import app
-from filter_fixer import ip_gateway_to_service, sender_gateway_to_service, recip_gateway_to_service, \
-    content_gateway_to_service, attach_gateway_to_service
+from filter_fixer import ip_convert, sender_convert, recip_convert, \
+    content_convert, attach_convert
 
 
 @app.route('/')
@@ -15,7 +15,7 @@ def ip():
     title = 'IP filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = ip_gateway_to_service(data)
+        converted_data = ip_convert(data)
         return render_template('ip.html', title=title, output=converted_data)
     return render_template('ip.html', title=title, output='')
 
@@ -26,7 +26,7 @@ def sender():
     title = 'Sender filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = sender_gateway_to_service(data)
+        converted_data = sender_convert(data)
         return render_template('sender.html', title=title, output=converted_data)
     return render_template('sender.html', title=title)
 
@@ -37,7 +37,7 @@ def recipient():
     title = 'Recipient filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = recip_gateway_to_service(data)
+        converted_data = recip_convert(data)
         return render_template('recipient.html', title=title, output=converted_data)
     return render_template('recipient.html', title=title)
 
@@ -47,7 +47,7 @@ def content():
     title = 'Content filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = content_gateway_to_service(data)
+        converted_data = content_convert(data)
         return render_template('content.html', title=title, output=converted_data)
     return render_template('content.html', title=title)
 
@@ -58,6 +58,6 @@ def attachment():
     title = 'Attachment filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = attach_gateway_to_service(data)
+        converted_data = attach_convert(data)
         return render_template('attachment.html', title=title, output=converted_data)
     return render_template('attachment.html', title=title)

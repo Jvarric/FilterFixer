@@ -4,7 +4,22 @@
 import re
 
 
-def ip_gateway_to_service(filters):
+def remove_empty(my_list):
+    clean_list = [x for x in my_list if x is not None]
+    return clean_list
+
+
+def get_sorted(my_list):
+    # Only sort pattern before first comma
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1))
+    output = '\n'.join(my_list)
+    if output == '':
+        return "No results. Go back and check for improper formatting"
+    else:
+        return output
+
+
+def ip_convert(filters):
     ip = re.compile(r'''
                     (?P<ip>                         # Start IP section
                     (?:25[0-5]|2[0-4]\d|1?\d?\d).
@@ -20,7 +35,6 @@ def ip_gateway_to_service(filters):
                     (?P<comment>.*)''',
                     re.I | re.X)
     my_list = []
-
     my_filters = filters.splitlines()
 
     for line in my_filters:
@@ -44,17 +58,13 @@ def ip_gateway_to_service(filters):
             match = ','.join(match.group('ip', 'netmask')) + ',' + action + ',' + ''.join(match.group('comment'))
             my_list.append(match)
 
-    # Remove None entries from list and sort
-    list(filter(None.__ne__, my_list))
-    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-    output = '\n'.join(my_list)
-    if output == '':
-        return "No results. Go back and check for improper formatting"
+    my_list = remove_empty(my_list)
+    output = get_sorted(my_list)
 
     return output
 
 
-def sender_gateway_to_service(filters):
+def sender_convert(filters):
     sender_allow = re.compile(r'(.+?),(.*)', re.I)
     sender_block = re.compile(r'(.+?),(.*),(block|quarantine|tag)', re.I)
     my_list = []
@@ -88,17 +98,13 @@ def sender_gateway_to_service(filters):
             match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
             my_list.append(match)
 
-    # Remove None from list entries and sort
-    list(filter(None.__ne__, my_list))
-    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-    output = '\n'.join(my_list)
-    if output == '':
-        return "No results. Go back and check for improper formatting"
+    my_list = remove_empty(my_list)
+    output = get_sorted(my_list)
 
     return output
 
 
-def recip_gateway_to_service(filters):
+def recip_convert(filters):
     recip_allow = re.compile(r'(.+?),(.*)', re.I)
     recip_block = re.compile(r'(.+?),(.+),(.*)', re.I)
     my_list = []
@@ -119,29 +125,21 @@ def recip_gateway_to_service(filters):
             match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
             my_list.append(match)
 
-    # Remove None from list entries and sort
-    list(filter(None.__ne__, my_list))
-    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-    output = '\n'.join(my_list)
-    if output == '':
-        return "No results. Go back and check for improper formatting"
+    my_list = remove_empty(my_list)
+    output = get_sorted(my_list)
 
     return output
 
 
-def attach_gateway_to_service(filters):
-    return "This function not available"
-
-
-def content_gateway_to_service(filters):
+def content_convert(filters):
     content = re.compile(r'''
                          (?P<pattern>.+),
                          (?P<comment>.*),
                          (?P<action>Block|Quarantine|Tag|Whitelist|Off),          # Inbound action
                          (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect), # Outbound action
-                         (?P<subject>[01]),                                       # Apply to subject
-                         (?P<header>[01]),                                        # Apply to header
-                         (?P<body>[01])''',                                       # Apply to body
+                         (?P<subject>[01]),
+                         (?P<header>[01]),
+                         (?P<body>[01])''',
                          re.I | re.X)
     my_list = []
     my_filters = filters.splitlines()
@@ -171,15 +169,14 @@ def content_gateway_to_service(filters):
             # Add newly formatted line to list
             my_list.append(match)
 
-    # Remove None from list entries and sort
-    list(filter(None.__ne__, my_list))
-    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
-
-    output = '\n'.join(my_list)
-    if output == '':
-        return "No results. Go back and check for improper formatting"
+    my_list = remove_empty(my_list)
+    output = get_sorted(my_list)
 
     return output
+
+
+def attach_convert(filters):
+    return "This function not available"
 
 
 def main():
