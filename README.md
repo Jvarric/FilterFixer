@@ -13,4 +13,4 @@ Currently duplicate entries are not removed, but a sorted list does make these m
 #### Notes
 * Allowed and blocked lists for IP and Sender filters can be added at the same time, they will be combined into a single list
 * Any Recipient block entries will be removed as these are not supported by BESS
-* Any action of Tag on the appliance filters will be changed to Quarantine upon conversion, as Tag is not supported by BESS
+* Tag will always be changed to Quarantine and filters not supporting Quarantine will be set to Block instead
