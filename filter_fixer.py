@@ -1,5 +1,7 @@
 # TODO
-# Write and implement recipient filter function
+# Implement attachment filter function
+# Re-enable ability to run local conversions via txt file
+# Remove dupes
 
 import re
 
@@ -11,7 +13,7 @@ def remove_empty(my_list):
 
 def get_sorted(my_list):
     # Only sort pattern before first comma
-    my_list.sort(key=lambda x: x.split(',', maxsplit=1))
+    my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
     output = '\n'.join(my_list)
     if output == '':
         return "No results. Go back and check for improper formatting"
@@ -31,9 +33,8 @@ def ip_convert(filters):
                     (?:25[0-5]|2[0-4]\d|1?\d?\d).
                     (?:25[0-5]|2[0-4]\d|1?\d?\d).
                     (?:25[0-5]|2[0-4]\d|1?\d?\d)),
-                    (?:(?P<action>.+),)?            # Action to take if blocklist entry
-                    (?P<comment>.*)''',
-                    re.I | re.X)
+                    (?:(?P<action>.+),)?            # Blocklist action
+                    (?P<comment>.*)''', re.I | re.X)
     my_list = []
     my_filters = filters.splitlines()
 
@@ -50,12 +51,13 @@ def ip_convert(filters):
                 action = ''.join(match.group('action'))
                 action = action.lower()
 
-            # If action was tag or quarantine, set to block since BESS doesn't support tag or quarantine
+            # Change tag or quarantine to block
             if (action == 'tag') or (action == 'quarantine'):
                 action = 'block'
 
             # Join back into a single line matching BESS formatting
-            match = ','.join(match.group('ip', 'netmask')) + ',' + action + ',' + ''.join(match.group('comment'))
+            match = ','.join(match.group('ip', 'netmask')) + ',' + action + \
+                    ',' + ''.join(match.group('comment'))
             my_list.append(match)
 
     my_list = remove_empty(my_list)
@@ -74,28 +76,31 @@ def sender_convert(filters):
     for line in my_filters:
         # Strip newline character
         line = line.rstrip()
-        if line == 'Email Address/Domain,Comment' or line == 'Email Address/Domain,Comment,Action':
+        if line == 'Email Address/Domain,Comment' or \
+           line == 'Email Address/Domain,Comment,Action':
             continue
         match = sender_block.match(line)
 
         if match:
-            # Join pattern, action, and comment in proper order, ensuring action is lowercase
+            # Convert action to string and drop case
             action = ''.join(match.group(3))
             action = action.lower()
 
-            # If action was tag, change to quarantine since BESS doesn't support tag
+            # Change tag to quarantine
             if action == 'tag':
                 action = 'quarantine'
 
             # Join back into a single line matching BESS formatting
-            match = ''.join(match.group(1)) + ',' + action + ',' + ''.join(match.group(2))
+            match = ''.join(match.group(1)) + ',' + action + ',' + \
+                    ''.join(match.group(2))
             my_list.append(match)
         else:
             match = sender_allow.match(line)
             # Join back into a single line matching BESS formatting
             if not match:
                 continue
-            match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
+            match = ''.join(match.group(1)) + ',exempt,' + \
+                    ''.join(match.group(2))
             my_list.append(match)
 
     my_list = remove_empty(my_list)
@@ -112,7 +117,8 @@ def recip_convert(filters):
     my_filters = filters.splitlines()
 
     for line in my_filters:
-        if line == 'Email Address/Domain,Comment' or line == 'Email Address/Domain,Action,Comment':
+        if line == 'Email Address/Domain,Comment' or \
+           line == 'Email Address/Domain,Action,Comment':
             continue
         match = recip_block.match(line)
         if match:
@@ -121,8 +127,9 @@ def recip_convert(filters):
 
         match = recip_allow.match(line)
         if match:
-            # Join pattern, action, and comment in proper order, ensuring action is lowercase
-            match = ''.join(match.group(1)) + ',exempt,' + ''.join(match.group(2))
+            # Join pattern, action, and comment in proper order
+            match = ''.join(match.group(1)) + ',exempt,' + \
+                    ''.join(match.group(2))
             my_list.append(match)
 
     my_list = remove_empty(my_list)
@@ -133,14 +140,13 @@ def recip_convert(filters):
 
 def content_convert(filters):
     content = re.compile(r'''
-                         (?P<pattern>.+),
-                         (?P<comment>.*),
-                         (?P<action>Block|Quarantine|Tag|Whitelist|Off),          # Inbound action
-                         (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect), # Outbound action
-                         (?P<subject>[01]),
-                         (?P<header>[01]),
-                         (?P<body>[01])''',
-                         re.I | re.X)
+                        (?P<pattern>.+),
+                        (?P<comment>.*),
+                        (?P<action>Block|Quarantine|Tag|Whitelist|Off),
+                        (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
+                        (?P<subject>[01]),
+                        (?P<header>[01]),
+                        (?P<body>[01])''', re.I | re.X)
     my_list = []
     my_filters = filters.splitlines()
 
@@ -150,11 +156,11 @@ def content_convert(filters):
         match = content.match(line)
 
         if match:
-            # Join pattern, action, and comment in proper order, ensuring action is lowercase
+            # Convert action to string and drop case
             action = ''.join(match.group('action'))
             action = action.lower()
 
-            # If action was tag, change to quarantine since BESS doesn't support tag
+            # Change action to BESS equivalent
             if action == 'tag':
                 action = 'quarantine'
             elif action == 'whitelist':
@@ -162,11 +168,11 @@ def content_convert(filters):
             elif action == 'off':
                 break
 
-            # Join back into a single line matching BESS formatting and add entries for attachment, sender, recip
-            match = ','.join(match.group('pattern', 'comment')) + ',' + action + ',' + \
-                    ','.join(match.group('subject', 'header', 'body')) + ',0,0,0'
-
-            # Add newly formatted line to list
+            # Combine into single line
+            match = ','.join(match.group('pattern', 'comment')) + ',' + \
+                    action + ',' + \
+                    ','.join(match.group('subject', 'header', 'body')) + \
+                    ',0,0,0'
             my_list.append(match)
 
     my_list = remove_empty(my_list)
@@ -176,12 +182,13 @@ def content_convert(filters):
 
 
 def attach_convert(filters):
-    return "This function not available"
+    return "This function not currently available"
 
 
 def main():
     # Nope
     pass
+
 
 if __name__ == "__main__":
     main()
