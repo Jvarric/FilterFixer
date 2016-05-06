@@ -1,3 +1,7 @@
+#!/usr/bin/env python3
+# FilterFixer
+# Author: Eric Gillett <egillett@barracuda.com>
+# Version: 0.9
 # TODO: add function to remove dupes
 
 import re
