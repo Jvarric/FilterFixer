@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 from flask import render_template, request
 from app import app
 from filter_fixer import ip_convert, sender_convert, recip_convert, \
