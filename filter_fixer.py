@@ -7,6 +7,30 @@
 import re
 
 
+def remove_dupes(filters):
+    unique, dupes = set(), set()
+    out = []
+    dupe_num = 0
+    my_list = filters.splitlines()
+
+    for line in my_list:
+        pattern = (line.split(',', maxsplit=1)[0])
+        if pattern not in unique:
+            if pattern == '':
+                continue
+            unique.add(pattern)
+            out.append(line)
+        else:
+            dupes.add(pattern)
+            dupe_num += 1
+
+    out = remove_empty(out)
+    out = get_sorted(out)
+    if dupes == set():
+        dupes = ['No duplicates found']
+    return out, dupes, dupe_num
+
+
 def remove_empty(my_list):
     clean_list = [x for x in my_list if x is not None]
     return clean_list

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import render_template, request
 from app import app
-from filter_fixer import ip_convert, sender_convert, recip_convert, \
+from filter_fixer import remove_dupes, ip_convert, sender_convert, recip_convert, \
     content_convert, attach_convert
 
 
@@ -9,6 +9,16 @@ from filter_fixer import ip_convert, sender_convert, recip_convert, \
 @app.route('/index')
 def index():
     return render_template('index.html')
+
+
+@app.route('/dedupe', methods=['GET', 'POST'])
+def dedupe():
+    title = 'Deduplication'
+    if request.method == 'POST':
+        data = request.form['filter-input']
+        converted_data, dupes, dupe_num = remove_dupes(data)
+        return render_template('dedupe.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
+    return render_template('dedupe.html', title=title, output='', dupes='', dupe_num='')
 
 
 @app.route('/ip', methods=['GET', 'POST'])

@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
 {% block nav %}
-	<li><a href="{{ url_for('dedupe') }}">Dedupe</a></li>
+	<li class="active"><a href="{{ url_for('dedupe') }}">Dedupe</a></li>
 	<li><a href="{{ url_for('ip') }}">IP Filters</a></li>
 	<li><a href="{{ url_for('sender') }}">Sender Filters</a></li>
-	<li class="active"><a href="{{ url_for('recipient') }}">Recipient Filters</a></li>
+	<li><a href="{{ url_for('recipient') }}">Recipient Filters</a></li>
 	<li><a href="{{ url_for('content') }}">Content Filters</a></li>
 	<li><a href="{{ url_for('attachment') }}">Attachment Filters</a></li>
 {% endblock %}
 
 {% block content %}
-	<h2>Recipient filters</h2><br>
+	<h2>Deduplication</h2><br>
 	<div class="filters" style="display: flex;">
 		<div>
 			<form method="post" name="form">
@@ -20,14 +20,14 @@
 		</div>
 		<div>
 			<ul>
+				{% if dupes %}
+                <h4>Total duplicate entries removed: {{ dupe_num }}</h4>
+                {% for dupe in dupes %}
 				<li>
-					<b>Required formatting:</b><br>
-					Email Address/Domain,Comment
+                    {{ dupe }}
 				</li>
-                <br>
-				<li>
-					<em style="color: red">Note:</em> Only add allowed recipients, BESS does not allow blocking by recipient</p>
-				</li>
+                {% endfor %}
+                {% endif %}
 			</ul>
 		</div>
 	</div>
