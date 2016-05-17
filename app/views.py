@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 from flask import render_template, request
 from app import app
-from filter_fixer import remove_dupes, ip_convert, sender_convert, recip_convert, \
+from filter_fixer import deduplicate, ip_convert, sender_convert, recip_convert, \
     content_convert, attach_convert
 
 
@@ -16,9 +16,9 @@ def dedupe():
     title = 'Deduplication'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data, dupes, dupe_num = remove_dupes(data)
+        converted_data, dupes, dupe_num = deduplicate(data)
         return render_template('dedupe.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
-    return render_template('dedupe.html', title=title, output='', dupes='', dupe_num='')
+    return render_template('dedupe.html', title=title, output='')
 
 
 @app.route('/ip', methods=['GET', 'POST'])
@@ -26,8 +26,8 @@ def ip():
     title = 'IP filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = ip_convert(data)
-        return render_template('ip.html', title=title, output=converted_data)
+        converted_data, dupes, dupe_num = ip_convert(data)
+        return render_template('ip.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
     return render_template('ip.html', title=title, output='')
 
 
@@ -37,8 +37,8 @@ def sender():
     title = 'Sender filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = sender_convert(data)
-        return render_template('sender.html', title=title, output=converted_data)
+        converted_data, dupes, dupe_num = sender_convert(data)
+        return render_template('sender.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
     return render_template('sender.html', title=title)
 
 
@@ -48,8 +48,8 @@ def recipient():
     title = 'Recipient filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = recip_convert(data)
-        return render_template('recipient.html', title=title, output=converted_data)
+        converted_data, dupes, dupe_num = recip_convert(data)
+        return render_template('recipient.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
     return render_template('recipient.html', title=title)
 
 
@@ -58,8 +58,8 @@ def content():
     title = 'Content filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = content_convert(data)
-        return render_template('content.html', title=title, output=converted_data)
+        converted_data, dupes, dupe_num = content_convert(data)
+        return render_template('content.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
     return render_template('content.html', title=title)
 
 
@@ -69,6 +69,6 @@ def attachment():
     title = 'Attachment filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data = attach_convert(data)
-        return render_template('attachment.html', title=title, output=converted_data)
+        converted_data, dupes, dupe_num = attach_convert(data)
+        return render_template('attachment.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
     return render_template('attachment.html', title=title)

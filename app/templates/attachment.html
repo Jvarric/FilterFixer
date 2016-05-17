@@ -24,6 +24,15 @@
 					<b>Required formatting:</b><br>
 					<p style="font-size: small">Filename Pattern,Comment,Inbound Action,Outbound Action,Check Archives</p>
 				</li>
+                {% if dupes %}
+                <br>
+                <h4>Total duplicate entries removed: {{ dupe_num }}</h4>
+                {% for dupe in dupes %}
+				<li>
+                    {{ dupe }}
+				</li>
+                {% endfor %}
+                {% endif %}
 			</ul>
 		</div>
 	</div>

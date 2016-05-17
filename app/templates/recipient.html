@@ -28,6 +28,15 @@
 				<li>
 					<em style="color: red">Note:</em> Only add allowed recipients, BESS does not allow blocking by recipient</p>
 				</li>
+				{% if dupes %}
+                <br>
+                <h4>Total duplicate entries removed: {{ dupe_num }}</h4>
+                {% for dupe in dupes %}
+				<li>
+                    {{ dupe }}
+				</li>
+                {% endfor %}
+                {% endif %}
 			</ul>
 		</div>
 	</div>

@@ -1,34 +1,39 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 0.9
-# TODO: add function to remove dupes
+# Version: 1.0
+# TODO: implement reading from file
 
 import re
 
 
+def deduplicate(filters):
+    my_list = filters.splitlines()
+    output, dupes, dupe_num = remove_dupes(my_list)
+    return output, dupes, dupe_num
+
+
 def remove_dupes(filters):
     unique, dupes = set(), set()
-    out = []
+    output = []
     dupe_num = 0
-    my_list = filters.splitlines()
 
-    for line in my_list:
+    for line in filters:
         pattern = (line.split(',', maxsplit=1)[0])
         if pattern not in unique:
             if pattern == '':
                 continue
             unique.add(pattern)
-            out.append(line)
+            output.append(line)
         else:
             dupes.add(pattern)
             dupe_num += 1
 
-    out = remove_empty(out)
-    out = get_sorted(out)
+    output = remove_empty(output)
+    output = get_sorted(output)
     if dupes == set():
         dupes = ['No duplicates found']
-    return out, dupes, dupe_num
+    return output, dupes, dupe_num
 
 
 def remove_empty(my_list):
@@ -85,10 +90,9 @@ def ip_convert(filters):
                     ',' + ''.join(match.group('comment'))
             my_list.append(match)
 
-    my_list = remove_empty(my_list)
-    output = get_sorted(my_list)
+    output, dupes, dupe_num = remove_dupes(my_list)
 
-    return output
+    return output, dupes, dupe_num
 
 
 def sender_convert(filters):
@@ -129,10 +133,9 @@ def sender_convert(filters):
                     ''.join(match.group('comment'))
             my_list.append(match)
 
-    my_list = remove_empty(my_list)
-    output = get_sorted(my_list)
+    output, dupes, dupe_num = remove_dupes(my_list)
 
-    return output
+    return output, dupes, dupe_num
 
 
 def recip_convert(filters):
@@ -158,10 +161,9 @@ def recip_convert(filters):
                     ''.join(match.group('comment'))
             my_list.append(match)
 
-    my_list = remove_empty(my_list)
-    output = get_sorted(my_list)
+    output, dupes, dupe_num = remove_dupes(my_list)
 
-    return output
+    return output, dupes, dupe_num
 
 
 def content_convert(filters):
@@ -202,10 +204,9 @@ def content_convert(filters):
                     ',0,0,0'
             my_list.append(match)
 
-    my_list = remove_empty(my_list)
-    output = get_sorted(my_list)
+    output, dupes, dupe_num = remove_dupes(my_list)
 
-    return output
+    return output, dupes, dupe_num
 
 
 def attach_convert(filters):
@@ -242,14 +243,12 @@ def attach_convert(filters):
                     ',' + action + ',' + ''.join(match.group('comment'))
             my_list.append(match)
 
-    my_list = remove_empty(my_list)
-    output = get_sorted(my_list)
+    output, dupes, dupe_num = remove_dupes(my_list)
 
-    return output
+    return output, dupes, dupe_num
 
 
 def main():
-    # TODO: implement reading from file
     pass
 
 
