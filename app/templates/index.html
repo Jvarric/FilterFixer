@@ -11,10 +11,26 @@
 
 {% block content %}
 	<h2>Easily migrate filters from BESG to BESS</h2>
-	<p>This site will assist in converting various filters from Email Security Gateway formatting to the formatting used by the Email Security Service.</p>
+	<p>This site will change the formatting from BESG style to BESS style, sorting the output and removing duplicates.</p>
+    <p><b>New in v1.0: Duplicates can now be removed using the Dedupe page.</b>
+        <ul>
+            <li>The dedupe function will only remove duplicate entries and report the entries that were removed, the filter will <em>not</em> be converted to BESS format</li>
+            <li>The various converting functions will automatically remove dupes as part of the conversion process.</li>
+        </ul>
+    </p>
 
-	<h2>How To:</h2>
-	<p>To convert a filter for BESS simply copy the existing filters from the Bulk Edit window of the Gateway and paste them into the text box on the corresponding filter's page and hit Convert. The filters will be converted to the new formatting and sorted.*</p>
+	<h3>Usage:</h3>
+	<ol type="1">
+        <li>Copy the filter you are looking to move from the Bulk Edit section of the appliance.</li>
+        <li>Paste the list into the text box for that filter. If just looking to remove dupes, use the Dedupe page.</li>
+        <li>Hit Convert.</li>
+        <li>Copy and paste the resulting filter. That's it.</li>
+    </ol>
 
-	<p class="note">*</p><p class="note" style="font-size: small">Duplicate entries are not yet removed at this time.</p>
+    <h3>Notes:</h3>
+    <ul>
+        <li>Allowed and blocked lists for IP and Sender filters can be added at the same time, they will be combined into a single list</li>
+        <li>Any Recipient block entries will be removed as these are not supported by BESS</li>
+        <li>Tag will always be changed to Quarantine and filters not supporting Quarantine will be set to Block instead</li>
+    </ul>
 {% endblock %}
