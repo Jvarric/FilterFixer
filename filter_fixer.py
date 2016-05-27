@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.0
-# TODO: implement reading from file
+# Version: 1.0.5
 
 import re
 
@@ -14,20 +13,136 @@ def deduplicate(filters):
 
 
 def remove_dupes(filters):
-    unique, dupes = set(), set()
-    output = []
+    new, dupes = set(), set()
+    output, esg_content_list, esg_attach_list = [], [], []
     dupe_num = 0
+    esg_content_dict, esg_attach_dict, ess_content_dict = dict(), dict(), dict()
+
+    esg_content = re.compile(r'''
+                            (?P<pattern>.+),
+                            (?P<comment>.*),
+                            (?P<action>Block|Quarantine|Tag|Whitelist|Off),
+                            (?P<out_action>Block|Quarantine|Tag|Whitelist|Off
+                            |Encrypt
+                            |Redirect),
+                            (?P<subject>[01]),
+                            (?P<header>[01]),
+                            (?P<body>[01])''', re.I | re.X)
+    esg_attach = re.compile(r'''
+                           (?P<pattern>.+),
+                           (?P<comment>.*),
+                           (?P<action>Block|Quarantine|Tag|Whitelist|Off),
+                           (?P<out_action>Block|Quarantine|Tag|Whitelist|Off
+                           |Encrypt|Redirect),
+                           (?P<archive>[01])''', re.I | re.X)
+    ess_content = re.compile(r'''
+                            (?P<pattern>.+),
+                            (?P<action>Block|Allow|Quarantine),
+                            (?P<subject>[01]),
+                            (?P<header>[01]),
+                            (?P<body>[01]),
+                            (?P<attach>[01]),
+                            (?P<sender>[01]),
+                            (?P<recip>[01])''', re.I | re.X)
 
     for line in filters:
         pattern = (line.split(',', maxsplit=1)[0])
-        if pattern not in unique:
-            if pattern == '':
-                continue
-            unique.add(pattern)
+        # Check if line is a content filter or attachment filter
+        esg_content_filter = esg_content.match(line)
+        esg_attach_filter = esg_attach.match(line)
+        ess_content_filter = ess_content.match(line)
+
+        if pattern == '':
+            continue
+        elif esg_content_filter:
+            dupes.add(pattern)
+            # Check if pattern has been checked at least once before
+            if pattern in esg_content_dict:
+                dupe_num += 1
+                # Compare new subject flag, if enabled, set enabled
+                if esg_content_filter.group('subject') == '1':
+                    esg_content_dict[pattern][3] = '1'
+                # Compare new header flag, if enabled, set enabled
+                if esg_content_filter.group('header') == '1':
+                    esg_content_dict[pattern][4] = '1'
+                # Compare new body flag, if enabled, set enabled
+                if esg_content_filter.group('body') == '1':
+                    esg_content_dict[pattern][5] = '1'
+            else:
+                # If new pattern, add to dict
+                esg_content_dict[pattern] = [esg_content_filter.group('comment'),
+                                             esg_content_filter.group('action'),
+                                             esg_content_filter.group('out_action'),
+                                             esg_content_filter.group('subject'),
+                                             esg_content_filter.group('header'),
+                                             esg_content_filter.group('body')]
+        elif esg_attach_filter:
+            dupes.add(pattern)
+            # Check if pattern has been checked at least once before
+            if pattern in esg_attach_dict:
+                dupe_num += 1
+                # Compare new subject flag, if enabled, set enabled
+                if esg_attach_filter.group('archive') == '1':
+                    esg_attach_dict[pattern][3] = '1'
+            else:
+                # If new pattern, add to dict
+                esg_attach_dict[pattern] = [esg_attach_filter.group('comment'),
+                                            esg_attach_filter.group('action'),
+                                            esg_attach_filter.group('out_action'),
+                                            esg_attach_filter.group('archive')]
+        elif ess_content_filter:
+            dupes.add(pattern)
+            # Check if pattern has been checked at least once before
+            if pattern in ess_content_dict:
+                dupe_num += 1
+                # Compare new subject flag, if enabled, set enabled
+                if ess_content_filter.group('subject') == '1':
+                    ess_content_dict[pattern][1] = '1'
+                # Compare new header flag, if enabled, set enabled
+                if ess_content_filter.group('header') == '1':
+                    ess_content_dict[pattern][2] = '1'
+                # Compare new body flag, if enabled, set enabled
+                if ess_content_filter.group('body') == '1':
+                    ess_content_dict[pattern][3] = '1'
+                # Compare new attachment flag, if enabled, set enabled
+                if ess_content_filter.group('attach') == '1':
+                    ess_content_dict[pattern][4] = '1'
+                # Compare new sender flag, if enabled, set enabled
+                if ess_content_filter.group('sender') == '1':
+                    ess_content_dict[pattern][5] = '1'
+                # Compare new recipient flag, if enabled, set enabled
+                if ess_content_filter.group('recip') == '1':
+                    ess_content_dict[pattern][6] = '1'
+            else:
+                # If new pattern, add to dict
+                ess_content_dict[pattern] = [ess_content_filter.group('action'),
+                                             ess_content_filter.group('subject'),
+                                             ess_content_filter.group('header'),
+                                             ess_content_filter.group('body'),
+                                             ess_content_filter.group('attach'),
+                                             ess_content_filter.group('sender'),
+                                             ess_content_filter.group('recip')]
+        elif pattern not in new:
+            new.add(pattern)
             output.append(line)
         else:
             dupes.add(pattern)
             dupe_num += 1
+
+    # Merge flags into string and convert dictonary to list
+    for k, v in esg_content_dict.items():
+        esg_content_dict[k] = ','.join(v)
+    esg_content_list = ['{},{}'.format(k, v) for k, v in esg_content_dict.items()]
+    for k, v in esg_attach_dict.items():
+        esg_attach_dict[k] = ','.join(v)
+    esg_attach_list = ['{},{}'.format(k, v) for k, v in esg_attach_dict.items()]
+    for k, v in ess_content_dict.items():
+        ess_content_dict[k] = ','.join(v)
+    ess_content_list = ['{},{}'.format(k, v) for k, v in ess_content_dict.items()]
+    # Add content and attachment lists in case each hist has entries
+    output.extend(esg_content_list)
+    output.extend(esg_attach_list)
+    output.extend(ess_content_list)
 
     output = remove_empty(output)
     output = get_sorted(output)
@@ -213,7 +328,7 @@ def attach_convert(filters):
     attach = re.compile(r'''
                         (?P<pattern>.+),
                         (?P<comment>.*),
-                        (?P<actions>Block|Quarantine|Tag|Whitelist|Off),
+                        (?P<action>Block|Quarantine|Tag|Whitelist|Off),
                         (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
                         (?P<archive>[01])''', re.I | re.X)
     my_list = []
@@ -226,7 +341,7 @@ def attach_convert(filters):
 
         if match:
             # Convert action to string and drop case
-            action = ''.join(match.group('actions'))
+            action = ''.join(match.group('action'))
             action = action.lower()
 
             # Change action to BESS equivalent
@@ -239,8 +354,8 @@ def attach_convert(filters):
                 break
 
             # Combine into single line
-            match = 'filename,' + ','.join(match.group('pattern', 'archive')) + \
-                    ',' + action + ',' + ''.join(match.group('comment'))
+            match = 'filename,' + ','.join(match.group('pattern', 'archive'))\
+                    + ',' + action + ',' + ''.join(match.group('comment'))
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
