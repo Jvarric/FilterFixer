@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.0.5
+# Version: 1.0.6
+# TODO change flask to return/accept JSON
+# TODO add input for serial number on flask
+# TODO add write_db calls to each function
 
-import re
+import re, time, json
+from pymysql import connect
+serial = 1
 
 
 def deduplicate(filters):
@@ -250,6 +255,8 @@ def sender_convert(filters):
 
     output, dupes, dupe_num = remove_dupes(my_list)
 
+    write_db(serial, 'sender', json.dumps(my_filters), json.dumps(output))
+
     return output, dupes, dupe_num
 
 
@@ -361,6 +368,20 @@ def attach_convert(filters):
     output, dupes, dupe_num = remove_dupes(my_list)
 
     return output, dupes, dupe_num
+
+def write_db(serial, filter_type, input_filter, output_filter):
+    cur_time = time.strftime('%Y-%m-%d %H:%M:%S')
+    conn = connect(host='localhost', port=3306, user='cudatools', passwd='cudatools', db='world')
+    cur = conn.cursor()
+    try:
+        cur.execute('INSERT INTO stats(date, serial, filter, input, output) VALUES (%s, %s, %s, '
+                    '%s, %s)',
+                    (cur_time, serial, filter_type, input_filter, output_filter))
+    except Exception as e:
+        print(e)
+    finally:
+        cur.close()
+    return 0
 
 
 def main():
