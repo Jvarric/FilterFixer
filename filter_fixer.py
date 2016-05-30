@@ -6,7 +6,7 @@
 # TODO add input for serial number on flask
 # TODO add write_db calls to each function
 
-import re, time, json
+import re, datetime, json
 from pymysql import connect
 serial = 1
 
@@ -211,6 +211,7 @@ def ip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
+    write_db(serial, 'ip', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -254,8 +255,7 @@ def sender_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-
-    write_db(serial, 'sender', json.dumps(my_filters), json.dumps(output))
+    write_db(serial, 'sender', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -284,6 +284,7 @@ def recip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
+    write_db(serial, 'recipient', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -327,6 +328,7 @@ def content_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
+    write_db(serial, 'content', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -366,17 +368,19 @@ def attach_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
+    write_db(serial, 'attachment', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
+
 def write_db(serial, filter_type, input_filter, output_filter):
-    cur_time = time.strftime('%Y-%m-%d %H:%M:%S')
-    conn = connect(host='localhost', port=3306, user='cudatools', passwd='cudatools', db='world')
+    cur_time = datetime.datetime.utcnow()
+    conn = connect(host='localhost', port=3306, user='', passwd='', db='')
     cur = conn.cursor()
     try:
         cur.execute('INSERT INTO stats(date, serial, filter, input, output) VALUES (%s, %s, %s, '
                     '%s, %s)',
-                    (cur_time, serial, filter_type, input_filter, output_filter))
+                    (cur_time, serial, filter_type, json.dumps(input_filter), json.dumps(output_filter)))
     except Exception as e:
         print(e)
     finally:
