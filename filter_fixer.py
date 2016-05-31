@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.0.6
+# Version: 1.0.9
 # TODO change flask to return/accept JSON
 # TODO add input for serial number on flask
-# TODO add write_db calls to each function
 
-import re, datetime, json
+import re, datetime, json, inspect
 from pymysql import connect
-serial = 1
 
 
 def deduplicate(filters):
@@ -18,6 +16,9 @@ def deduplicate(filters):
 
 
 def remove_dupes(filters):
+    # Get calling function name so we don't write to db twice
+    caller = inspect.stack()[1][3]
+    print(caller)
     new, dupes = set(), set()
     output, esg_content_list, esg_attach_list = [], [], []
     dupe_num = 0
@@ -60,9 +61,9 @@ def remove_dupes(filters):
         if pattern == '':
             continue
         elif esg_content_filter:
-            dupes.add(pattern)
             # Check if pattern has been checked at least once before
             if pattern in esg_content_dict:
+                dupes.add(pattern)
                 dupe_num += 1
                 # Compare new subject flag, if enabled, set enabled
                 if esg_content_filter.group('subject') == '1':
@@ -82,9 +83,9 @@ def remove_dupes(filters):
                                              esg_content_filter.group('header'),
                                              esg_content_filter.group('body')]
         elif esg_attach_filter:
-            dupes.add(pattern)
             # Check if pattern has been checked at least once before
             if pattern in esg_attach_dict:
+                dupes.add(pattern)
                 dupe_num += 1
                 # Compare new subject flag, if enabled, set enabled
                 if esg_attach_filter.group('archive') == '1':
@@ -96,9 +97,9 @@ def remove_dupes(filters):
                                             esg_attach_filter.group('out_action'),
                                             esg_attach_filter.group('archive')]
         elif ess_content_filter:
-            dupes.add(pattern)
             # Check if pattern has been checked at least once before
             if pattern in ess_content_dict:
+                dupes.add(pattern)
                 dupe_num += 1
                 # Compare new subject flag, if enabled, set enabled
                 if ess_content_filter.group('subject') == '1':
@@ -151,6 +152,9 @@ def remove_dupes(filters):
 
     output = remove_empty(output)
     output = get_sorted(output)
+    # Only write to db if called directly
+    if caller == 'deduplicate':
+        write_db('dedupe', filters, output.splitlines())
     if dupes == set():
         dupes = ['No duplicates found']
     return output, dupes, dupe_num
@@ -166,7 +170,7 @@ def get_sorted(my_list):
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
     output = '\n'.join(my_list)
     if output == '':
-        return "No results. Go back and check for improper formatting"
+        return 'No results. Go back and check for improper formatting'
     else:
         return output
 
@@ -211,7 +215,7 @@ def ip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db(serial, 'ip', my_filters, output.splitlines())
+    write_db('ip', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -255,7 +259,7 @@ def sender_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db(serial, 'sender', my_filters, output.splitlines())
+    write_db('sender', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -284,7 +288,7 @@ def recip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db(serial, 'recipient', my_filters, output.splitlines())
+    write_db('recipient', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -328,7 +332,7 @@ def content_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db(serial, 'content', my_filters, output.splitlines())
+    write_db('content', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -368,19 +372,21 @@ def attach_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db(serial, 'attachment', my_filters, output.splitlines())
+    write_db('attachment', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
 
-def write_db(serial, filter_type, input_filter, output_filter):
+def write_db(filter_type, input_filter, output_filter):
+    if output_filter == 'No results. Go back and check for improper formatting':
+        return 0
     cur_time = datetime.datetime.utcnow()
     conn = connect(host='localhost', port=3306, user='', passwd='', db='')
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO stats(date, serial, filter, input, output) VALUES (%s, %s, %s, '
+        cur.execute('INSERT INTO stats(date, filter, input, output) VALUES (%s, %s, '
                     '%s, %s)',
-                    (cur_time, serial, filter_type, json.dumps(input_filter), json.dumps(output_filter)))
+                    (cur_time, filter_type, json.dumps(input_filter), json.dumps(output_filter)))
     except Exception as e:
         print(e)
     finally:
