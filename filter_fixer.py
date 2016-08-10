@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.0.9
+# Version: 1.2
 # TODO change flask to return/accept JSON
 # TODO add input for serial number on flask
 
@@ -22,6 +22,7 @@ def remove_dupes(filters):
     output, esg_content_list, esg_attach_list = [], [], []
     dupe_num = 0
     esg_content_dict, esg_attach_dict, ess_content_dict = dict(), dict(), dict()
+    warn = 0
 
     esg_content = re.compile(r'''
                             (?P<pattern>.+),
@@ -43,12 +44,7 @@ def remove_dupes(filters):
     ess_content = re.compile(r'''
                             (?P<pattern>.+),
                             (?P<action>Block|Allow|Quarantine),
-                            (?P<subject>[01]),
-                            (?P<header>[01]),
-                            (?P<body>[01]),
-                            (?P<attach>[01]),
-                            (?P<sender>[01]),
-                            (?P<recip>[01])''', re.I | re.X)
+                            (?P<scope>.+)''', re.I | re.X)
 
     for line in filters:
         pattern = (line.split(',', maxsplit=1)[0])
@@ -100,33 +96,11 @@ def remove_dupes(filters):
             if pattern in ess_content_dict:
                 dupes.add(pattern)
                 dupe_num += 1
-                # Compare new subject flag, if enabled, set enabled
-                if ess_content_filter.group('subject') == '1':
-                    ess_content_dict[pattern][1] = '1'
-                # Compare new header flag, if enabled, set enabled
-                if ess_content_filter.group('header') == '1':
-                    ess_content_dict[pattern][2] = '1'
-                # Compare new body flag, if enabled, set enabled
-                if ess_content_filter.group('body') == '1':
-                    ess_content_dict[pattern][3] = '1'
-                # Compare new attachment flag, if enabled, set enabled
-                if ess_content_filter.group('attach') == '1':
-                    ess_content_dict[pattern][4] = '1'
-                # Compare new sender flag, if enabled, set enabled
-                if ess_content_filter.group('sender') == '1':
-                    ess_content_dict[pattern][5] = '1'
-                # Compare new recipient flag, if enabled, set enabled
-                if ess_content_filter.group('recip') == '1':
-                    ess_content_dict[pattern][6] = '1'
+                warn = 1
             else:
                 # If new pattern, add to dict
                 ess_content_dict[pattern] = [ess_content_filter.group('action'),
-                                             ess_content_filter.group('subject'),
-                                             ess_content_filter.group('header'),
-                                             ess_content_filter.group('body'),
-                                             ess_content_filter.group('attach'),
-                                             ess_content_filter.group('sender'),
-                                             ess_content_filter.group('recip')]
+                                             ess_content_filter.group('scope')]
         elif pattern not in new:
             new.add(pattern)
             output.append(line)
@@ -144,13 +118,17 @@ def remove_dupes(filters):
     for k, v in ess_content_dict.items():
         ess_content_dict[k] = ','.join(v)
     ess_content_list = ['{},{}'.format(k, v) for k, v in ess_content_dict.items()]
-    # Add content and attachment lists in case each hist has entries
+    # Add content and attachment lists in case each list has entries
     output.extend(esg_content_list)
     output.extend(esg_attach_list)
     output.extend(ess_content_list)
 
     output = remove_empty(output)
     output = get_sorted(output)
+    # Warn if there are duplicate BESS content filters
+    if warn:
+        return '\n'.join(filters), ['There are problems with content filter match scopes. Please '
+                                    'check for dupes manually.'], 0
     # Only write to db if called directly
     if caller == 'deduplicate':
         write_db('dedupe', filters, output.splitlines())
@@ -323,11 +301,23 @@ def content_convert(filters):
                 # Filter not enabled for inbound and should be ignored
                 break
 
+            # find scope
+            scope = ''
+            if match.group('subject') == '1':
+                scope += 'subject'
+            if match.group('header') == '1':
+                if scope == '':
+                    scope += 'header'
+                else:
+                    scope += ',header'
+            if match.group('body') == '1':
+                if scope == '':
+                    scope += 'body'
+                else:
+                    scope += ',body'
+
             # Combine into single line
-            match = ','.join(match.group('pattern', 'comment')) + ',' + \
-                    action + ',' + \
-                    ','.join(match.group('subject', 'header', 'body')) + \
-                    ',0,0,0'
+            match = ','.join(match.group('pattern', 'comment')) + ',' + action + ',"' + scope + '"'
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
