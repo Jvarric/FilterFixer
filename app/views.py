@@ -58,8 +58,9 @@ def content():
     title = 'Content filters'
     if request.method == 'POST':
         data = request.form['filter-input']
-        converted_data, dupes, dupe_num = content_convert(data)
-        return render_template('content.html', title=title, output=converted_data, dupes=dupes, dupe_num=dupe_num)
+        inbound, outbound, dupes_in, dupes_out, dupe_num = content_convert(data)
+        return render_template('content.html', title=title, inbound=inbound, outbound=outbound, dupes_in=dupes_in,
+                               dupes_out=dupes_out, dupe_num=dupe_num)
     return render_template('content.html', title=title)
 
 

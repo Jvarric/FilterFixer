@@ -12,22 +12,46 @@
 {% block content %}
 	<h2>Content filters</h2><br>
 	<div class="filters" style="display: flex;">
+
+		{% if inbound %}
+		<div>
+			<h4>Inbound</h4>
+			<form method="post" name="form">
+				<textarea name="filter-input" rows="10" cols="60">{{ inbound }}</textarea><br>
+			</form><br>
+			<h4>Outbound</h4>
+			<form method="post" name="form">
+				<textarea name="filter-input" rows="10" cols="60">{{ outbound }}</textarea><br>
+			</form>
+		</div>
+		{% else %}
 		<div>
 			<form method="post" name="form">
-				<textarea name="filter-input" rows="20" cols="60" placeholder="Enter filters">{{ output }}</textarea><br>
+				<textarea name="filter-input" rows="20" cols="60" placeholder="Enter filters">{{ input }}</textarea><br>
 				<input class="btn btn-primary" type="submit" value="Convert">
 			</form>
 		</div>
+		{% endif %}
 		<div>
 			<ul>
 				<li>
 					<b>Required formatting:</b><br>
 					<p style="font-size: small">Pattern,Comment,Inbound Action,Outbound Action,Subject,Header,Body</p>
 				</li>
-                {% if dupes %}
-                <br>
-                <h4>Total duplicate entries removed: {{ dupe_num }}</h4>
-                {% for dupe in dupes %}
+                {% if dupes_in %}
+                <h4>Duplicate entries removed: {{ dupe_num }}</h4>
+				<h4>Inbound duplicates:</h4>
+                {% for dupe in dupes_in %}
+				<li>
+                    {{ dupe }}
+				</li>
+                {% endfor %}
+				{% endif %}
+				{% if dupes_out %}
+                <br><br><br><br><br><br><br>
+                <h4>Duplicate entries removed: {{ dupe_num }}</h4>
+				<h4>Outbound duplicates:</h4>
+                {% for dupe in dupes_out %}
 				<li>
                     {{ dupe }}
 				</li>

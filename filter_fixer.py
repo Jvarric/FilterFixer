@@ -1,36 +1,93 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.2
+# Version: 1.8
 # TODO change flask to return/accept JSON
-# TODO add input for serial number on flask
 
-import re, datetime, json, inspect
+import re
+import json
+import dbinfo
+import inspect
 from pymysql import connect
 
 
 def deduplicate(filters):
     my_list = filters.splitlines()
     output, dupes, dupe_num = remove_dupes(my_list)
+    write_db('dedupe', my_list, output.splitlines())
     return output, dupes, dupe_num
+
+
+def determine_type():
+    pass
+    return 0
+
+
+def generate_scope(scope):
+    subject, header, body = scope
+    scope_list = []
+    scope_count = 0
+
+    if subject == '1':
+        scope_list.append('subject')
+        scope_count += 1
+    if header == '1':
+        scope_list.append('headers')
+        scope_count += 1
+    if body == '1':
+        scope_list.append('body')
+        scope_count += 1
+    scope_str = ','.join(scope_list)
+    if scope_count > 1:
+        scope_str = '"' + scope_str + '"'
+
+    return scope_str
+
+
+def reduce_scope(scope):
+    scope_list = scope.strip('"').split(',')
+    subject, headers, body = 0, 0, 0
+
+    for l in scope_list:
+        if l == 'subject':
+            subject = '1'
+        if l == 'headers':
+            headers = '1'
+        if l == 'body':
+            body = '1'
+    scope_tuple = tuple(subject + headers + body)
+
+    return scope_tuple
 
 
 def remove_dupes(filters):
     # Get calling function name so we don't write to db twice
     caller = inspect.stack()[1][3]
     new, dupes = set(), set()
-    output, esg_content_list, esg_attach_list = [], [], []
+    output, esg_content_list, esg_attach_list, ess_content_list = [], [], [], []
     dupe_num = 0
-    esg_content_dict, esg_attach_dict, ess_content_dict = dict(), dict(), dict()
+    esg_content_dict, esg_attach_dict, ess_content_dict, ess_attach_dict, action_dict, scope_dict =\
+        dict(), dict(), dict(), dict(), dict(), dict()
     warn = 0
 
+    ip = re.compile(r'''
+                   (?P<ip>                         # Start IP section
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d)),
+                   (?P<netmask>                    # Start netmask section
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d).
+                   (?:25[0-5]|2[0-4]\d|1?\d?\d)),
+                   (?:(?P<action>.+),)?            # Blocklist action
+                   (?P<comment>.*)''', re.I | re.X)
     esg_content = re.compile(r'''
                             (?P<pattern>.+),
                             (?P<comment>.*),
                             (?P<action>Block|Quarantine|Tag|Whitelist|Off),
-                            (?P<out_action>Block|Quarantine|Tag|Whitelist|Off
-                            |Encrypt
-                            |Redirect),
+                            (?P<out_action>Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
                             (?P<subject>[01]),
                             (?P<header>[01]),
                             (?P<body>[01])''', re.I | re.X)
@@ -38,23 +95,37 @@ def remove_dupes(filters):
                            (?P<pattern>.+),
                            (?P<comment>.*),
                            (?P<action>Block|Quarantine|Tag|Whitelist|Off),
-                           (?P<out_action>Block|Quarantine|Tag|Whitelist|Off
-                           |Encrypt|Redirect),
+                           (?P<out_action>Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
                            (?P<archive>[01])''', re.I | re.X)
     ess_content = re.compile(r'''
                             (?P<pattern>.+),
-                            (?P<action>Block|Allow|Quarantine),
+                            (?P<action>Block|Allow|Quarantine|Encrypt),
                             (?P<scope>.+)''', re.I | re.X)
+    ess_attach = re.compile(r'''
+                           filename,
+                           (?P<pattern>.+),
+                           (?P<archive>[01]),
+                           (?P<action>block|allow|quarantine)''', re.I | re.X)
 
     for line in filters:
-        pattern = (line.split(',', maxsplit=1)[0])
+        line = line.lower()
         # Check if line is a content filter or attachment filter
         esg_content_filter = esg_content.match(line)
         esg_attach_filter = esg_attach.match(line)
         ess_content_filter = ess_content.match(line)
+        ess_attach_filter = ess_attach.match(line)
+
+        # Ignore filename at beginning of attachment filter
+        if ess_attach_filter:
+            pattern = (line.split(',', maxsplit=2)[1])
+        else:
+            pattern = (line.split(',', maxsplit=1)[0])
 
         if pattern == '':
             continue
+        # hack to skip IP
+        elif ip.match(line):
+            output.append(line)
         elif esg_content_filter:
             # Check if pattern has been checked at least once before
             if pattern in esg_content_dict:
@@ -77,6 +148,7 @@ def remove_dupes(filters):
                                              esg_content_filter.group('subject'),
                                              esg_content_filter.group('header'),
                                              esg_content_filter.group('body')]
+
         elif esg_attach_filter:
             # Check if pattern has been checked at least once before
             if pattern in esg_attach_dict:
@@ -91,16 +163,37 @@ def remove_dupes(filters):
                                             esg_attach_filter.group('action'),
                                             esg_attach_filter.group('out_action'),
                                             esg_attach_filter.group('archive')]
+
         elif ess_content_filter:
-            # Check if pattern has been checked at least once before
-            if pattern in ess_content_dict:
+            if pattern in action_dict.keys():
+                if ess_content_filter.group('action') != action_dict[pattern]:
+                    if ess_content_filter.group('action') == 'encrypt':
+                        action_dict[pattern] = 'encrypt'
+                    elif ess_content_filter.group('action') == 'allow' and \
+                            action_dict[pattern] == ('block' or 'quarantine'):
+                        action_dict[pattern] = 'allow'
+                    elif ess_content_filter.group('action') == 'block' and \
+                            action_dict[pattern] == 'quarantine':
+                        action_dict[pattern] = 'block'
+                else:
+                    pass
                 dupes.add(pattern)
                 dupe_num += 1
-                warn = 1
+            else:
+                # Add new pattern
+                # ess_content_dict[pattern] = [ess_content_filter.group('action'), scope]
+                action_dict[pattern] = ess_content_filter.group('action')
+                scope_dict[pattern] = ess_content_filter.group('scope')
+
+        elif ess_attach_filter:
+            if pattern in ess_attach_dict:
+                dupes.add(pattern)
+                dupe_num += 1
             else:
                 # If new pattern, add to dict
-                ess_content_dict[pattern] = [ess_content_filter.group('action'),
-                                             ess_content_filter.group('scope')]
+                ess_attach_dict[pattern] = [ess_attach_filter.group('archive'),
+                                            ess_attach_filter.group('action')]
+
         elif pattern not in new:
             new.add(pattern)
             output.append(line)
@@ -115,13 +208,20 @@ def remove_dupes(filters):
     for k, v in esg_attach_dict.items():
         esg_attach_dict[k] = ','.join(v)
     esg_attach_list = ['{},{}'.format(k, v) for k, v in esg_attach_dict.items()]
-    for k, v in ess_content_dict.items():
-        ess_content_dict[k] = ','.join(v)
+    ess_merge = [action_dict, scope_dict]
+    ess_content_dict = {}
+    for k in action_dict.keys():
+        ess_content_dict[k] = ','.join(ess_content_dict[k] for ess_content_dict in ess_merge)
     ess_content_list = ['{},{}'.format(k, v) for k, v in ess_content_dict.items()]
+    for k, v in ess_attach_dict.items():
+        ess_attach_dict[k] = ','.join(v)
+    ess_attach_list = ['filename,{},{}'.format(k, v) for k, v in ess_attach_dict.items()]
+
     # Add content and attachment lists in case each list has entries
     output.extend(esg_content_list)
     output.extend(esg_attach_list)
     output.extend(ess_content_list)
+    output.extend(ess_attach_list)
 
     output = remove_empty(output)
     output = get_sorted(output)
@@ -129,6 +229,7 @@ def remove_dupes(filters):
     if warn:
         return '\n'.join(filters), ['There are problems with content filter match scopes. Please '
                                     'check for dupes manually.'], 0
+
     # Only write to db if called directly
     if caller == 'deduplicate':
         write_db('dedupe', filters, output.splitlines())
@@ -147,9 +248,21 @@ def get_sorted(my_list):
     my_list.sort(key=lambda x: x.split(',', maxsplit=1)[0])
     output = '\n'.join(my_list)
     if output == '':
-        return 'No results. Go back and check for improper formatting'
+        return 'No results.'
     else:
         return output
+
+
+def change_action(my_list):
+    replacements = {'whitelist': 'allow', 'tag': 'quarantine'}
+    replaced = []
+    regex = re.compile('|'.join(map(re.escape, replacements)))
+
+    # Iterate through list and replace actions as needed, appending the resulting line into replaced
+    for line in my_list:
+        replaced.append(regex.sub(lambda match: replacements[match.group(0)], line))
+
+    return replaced
 
 
 def ip_convert(filters):
@@ -202,10 +315,10 @@ def sender_convert(filters):
     sender_block = re.compile(r'(?P<pattern>.+?),(?P<comment>.*),'
                               r'(?P<action>block|quarantine|tag)', re.I)
     my_list = []
-
     my_filters = filters.splitlines()
 
     for line in my_filters:
+        line = line.lower()
         # Strip newline character
         line = line.rstrip()
         if line.lower() == 'email address/domain,comment' or \
@@ -249,8 +362,9 @@ def recip_convert(filters):
     my_filters = filters.splitlines()
 
     for line in my_filters:
-        if line.lower() == 'email address/domain,comment' or \
-           line.lower() == 'email address/domain,action,comment':
+        line = line.lower()
+        if line == 'email address/domain,comment' or \
+           line == 'email address/domain,action,comment':
             continue
         match = recip_block.match(line)
         if match:
@@ -274,56 +388,41 @@ def content_convert(filters):
     content = re.compile(r'''
                         (?P<pattern>.+),
                         (?P<comment>.*),
-                        (?P<action>Block|Quarantine|Tag|Whitelist|Off),
-                        (?:Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
+                        (?P<in_action>Block|Quarantine|Tag|Whitelist|Off),
+                        (?P<out_action>Block|Quarantine|Tag|Whitelist|Off|Encrypt|Redirect),
                         (?P<subject>[01]),
-                        (?P<header>[01]),
+                        (?P<headers>[01]),
                         (?P<body>[01])''', re.I | re.X)
-    my_list = []
+
     my_filters = filters.splitlines()
+    inbound_filters, outbound_filters = [], []
 
     for line in my_filters:
+        line = line.lower()
         # Strip newline character
         line = line.rstrip()
         match = content.match(line)
 
         if match:
-            # Convert action to string and drop case
-            action = ''.join(match.group('action'))
-            action = action.lower()
+            # Add filters into inbound/outbound lists based on actions
+            if match.group('in_action') != ('off' or None):
+                scope = generate_scope(match.group('subject', 'headers', 'body'))
+                inbound_filters.append(','.join(match.group('pattern', 'in_action')) + ',' + scope)
+            if match.group('out_action') != ('off' or 'redirect'):
+                scope = generate_scope(match.group('subject', 'headers', 'body'))
+                outbound_filters.append(','.join(match.group('pattern', 'out_action')) + ',' + scope)
 
-            # Change action to BESS equivalent
-            if action == 'tag':
-                action = 'quarantine'
-            elif action == 'whitelist':
-                action = 'allow'
-            elif action == 'off':
-                # Filter not enabled for inbound and should be ignored
-                break
+    # Change action to BESS equivalent
+    inbound_filters = change_action(inbound_filters)
+    outbound_filters = change_action(outbound_filters)
 
-            # find scope
-            scope = ''
-            if match.group('subject') == '1':
-                scope += 'subject'
-            if match.group('header') == '1':
-                if scope == '':
-                    scope += 'header'
-                else:
-                    scope += ',header'
-            if match.group('body') == '1':
-                if scope == '':
-                    scope += 'body'
-                else:
-                    scope += ',body'
+    inbound, dupes_in, dupe_num_tmp = remove_dupes(inbound_filters)
+    outbound, dupes_out, dupe_num = remove_dupes(outbound_filters)
 
-            # Combine into single line
-            match = ','.join(match.group('pattern', 'comment')) + ',' + action + ',"' + scope + '"'
-            my_list.append(match)
+    dupe_num += dupe_num_tmp
+    write_db('content', my_filters, inbound.splitlines())
 
-    output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('content', my_filters, output.splitlines())
-
-    return output, dupes, dupe_num
+    return inbound, outbound, dupes_in, dupes_out, dupe_num
 
 
 def attach_convert(filters):
@@ -337,6 +436,7 @@ def attach_convert(filters):
     my_filters = filters.splitlines()
 
     for line in my_filters:
+        line = line.lower()
         # Strip newline character
         line = line.rstrip()
         match = attach.match(line)
@@ -367,15 +467,14 @@ def attach_convert(filters):
 
 
 def write_db(filter_type, input_filter, output_filter):
-    if output_filter == 'No results. Go back and check for improper formatting':
+    if output_filter == 'No results.':
         return 0
-    cur_time = datetime.datetime.utcnow()
-    conn = connect(host='localhost', port=3306, user='', passwd='', db='')
+    conn = connect(host=dbinfo.HOST, port=dbinfo.PORT, user=dbinfo.USERNAME,
+                   passwd=dbinfo.PASSWORD, db=dbinfo.DATABASE, autocommit=True)
     cur = conn.cursor()
     try:
-        cur.execute('INSERT INTO stats(date, filter, input, output) VALUES (%s, %s, '
-                    '%s, %s)',
-                    (cur_time, filter_type, json.dumps(input_filter), json.dumps(output_filter)))
+        cur.execute('INSERT INTO stats(filter, input, output) VALUES (%s, %s, %s)',
+                    (filter_type, json.dumps(input_filter), json.dumps(output_filter)))
     except Exception as e:
         print(e)
     finally:
