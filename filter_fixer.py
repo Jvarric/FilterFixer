@@ -105,7 +105,8 @@ def remove_dupes(filters):
                            filename,
                            (?P<pattern>.+),
                            (?P<archive>[01]),
-                           (?P<action>block|allow|quarantine)''', re.I | re.X)
+                           (?P<action>block|allow|quarantine),
+                           (?P<comment>.*)''', re.I | re.X)
 
     for line in filters:
         line = line.lower()
@@ -164,6 +165,16 @@ def remove_dupes(filters):
                                             esg_attach_filter.group('out_action'),
                                             esg_attach_filter.group('archive')]
 
+        elif ess_attach_filter:
+            if pattern in ess_attach_dict:
+                dupes.add(pattern)
+                dupe_num += 1
+            else:
+                # If new pattern, add to dict
+                ess_attach_dict[pattern] = [ess_attach_filter.group('archive'),
+                                            ess_attach_filter.group('action'),
+                                            ess_attach_filter.group('comment')]
+
         elif ess_content_filter:
             if pattern in action_dict.keys():
                 if ess_content_filter.group('action') != action_dict[pattern]:
@@ -184,15 +195,6 @@ def remove_dupes(filters):
                 # ess_content_dict[pattern] = [ess_content_filter.group('action'), scope]
                 action_dict[pattern] = ess_content_filter.group('action')
                 scope_dict[pattern] = ess_content_filter.group('scope')
-
-        elif ess_attach_filter:
-            if pattern in ess_attach_dict:
-                dupes.add(pattern)
-                dupe_num += 1
-            else:
-                # If new pattern, add to dict
-                ess_attach_dict[pattern] = [ess_attach_filter.group('archive'),
-                                            ess_attach_filter.group('action')]
 
         elif pattern not in new:
             new.add(pattern)
