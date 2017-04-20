@@ -2,9 +2,7 @@
 Easily move Barracuda filters from BESG to BESS
 
 This program will change the formatting from BESG style to BESS style, sorting the output and removing duplicates.
-#####New in v1.0: Duplicates can now be removed using the Dedupe page.
- * The dedupe function will only remove duplicate entries and report the entries that were removed, the filter will *not* be converted to BESS format
- * The various converting functions will automatically remove dupes as part of the conversion process.
+### New in v1.8: Content Filters page splits results into Inbound and Outbound.
 
 ## Usage
 1. Copy the filter you are looking to move from the Bulk Edit section of the appliance.
