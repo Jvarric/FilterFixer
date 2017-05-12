@@ -176,7 +176,10 @@ def remove_dupes(filters):
                                             ess_attach_filter.group('comment')]
 
         elif ess_content_filter:
-            if pattern in action_dict.keys():
+            if pattern in new:
+                dupes.add(pattern)
+                dupe_num += 1
+            elif pattern in action_dict.keys():
                 if ess_content_filter.group('action') != action_dict[pattern]:
                     if ess_content_filter.group('action') == 'encrypt':
                         action_dict[pattern] = 'encrypt'
