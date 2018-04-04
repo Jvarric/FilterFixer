@@ -5,16 +5,11 @@
 # TODO change flask to return/accept JSON
 
 import re
-import json
-import dbinfo
-import inspect
-from pymysql import connect
 
 
 def deduplicate(filters):
     my_list = filters.splitlines()
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('dedupe', my_list, output.splitlines())
     return output, dupes, dupe_num
 
 
@@ -61,8 +56,6 @@ def reduce_scope(scope):
 
 
 def remove_dupes(filters):
-    # Get calling function name so we don't write to db twice
-    caller = inspect.stack()[1][3]
     new, dupes = set(), set()
     output, esg_content_list, esg_attach_list, ess_content_list = [], [], [], []
     dupe_num = 0
@@ -236,9 +229,6 @@ def remove_dupes(filters):
         return '\n'.join(filters), ['There are problems with content filter match scopes. Please '
                                     'check for dupes manually.'], 0
 
-    # Only write to db if called directly
-    if caller == 'deduplicate':
-        write_db('dedupe', filters, output.splitlines())
     if dupes == set():
         dupes = ['No duplicates found']
     return output, dupes, dupe_num
@@ -311,7 +301,6 @@ def ip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('ip', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -355,7 +344,6 @@ def sender_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('sender', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -385,7 +373,6 @@ def recip_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('recipient', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
 
@@ -426,7 +413,6 @@ def content_convert(filters):
     outbound, dupes_out, dupe_num = remove_dupes(outbound_filters)
 
     dupe_num += dupe_num_tmp
-    write_db('content', my_filters, inbound.splitlines())
 
     return inbound, outbound, dupes_in, dupes_out, dupe_num
 
@@ -467,25 +453,8 @@ def attach_convert(filters):
             my_list.append(match)
 
     output, dupes, dupe_num = remove_dupes(my_list)
-    write_db('attachment', my_filters, output.splitlines())
 
     return output, dupes, dupe_num
-
-
-def write_db(filter_type, input_filter, output_filter):
-    if output_filter == 'No results.':
-        return 0
-    conn = connect(host=dbinfo.HOST, port=dbinfo.PORT, user=dbinfo.USERNAME,
-                   passwd=dbinfo.PASSWORD, db=dbinfo.DATABASE, autocommit=True)
-    cur = conn.cursor()
-    try:
-        cur.execute('INSERT INTO stats(filter, input, output) VALUES (%s, %s, %s)',
-                    (filter_type, json.dumps(input_filter), json.dumps(output_filter)))
-    except Exception as e:
-        print(e)
-    finally:
-        cur.close()
-    return 0
 
 
 def main():
