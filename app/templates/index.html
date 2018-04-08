@@ -12,15 +12,13 @@
 {% block content %}
 	<h2>Easily migrate filters from BESG to BESS</h2>
 	<p>This site will change the formatting from BESG style to BESS style, sorting the output and removing duplicates.</p>
-    <p><b>New in v1.8: Content Filters page splits results into Inbound and Outbound.</b>
-    </p>
 
-	<h3>Usage:</h3>
+	<h4>Usage:</h4>
 	<ol type="1">
-        <li>Copy the filter you are looking to move from the Bulk Edit section of the appliance.</li>
-        <li>Paste the list into the text box for that filter. If just looking to remove dupes, use the Dedupe page.</li>
-        <li>Hit Convert.</li>
-        <li>Copy and paste the resulting filter. That's it.</li>
+        <li>Copy the filter you are looking to move from the Bulk Edit section of the appliance</li>
+        <li>Paste the list into the text box for the corresponding filter. If just looking to remove duplicates, use the Dedupe page</li>
+        <li>Hit Convert</li>
+        <li>Copy and paste the resulting filter into ESS bulk edit page</li>
     </ol>
 
     <h3>Notes:</h3>
@@ -29,4 +27,8 @@
         <li>Any Recipient block entries will be removed as these are not supported by BESS</li>
         <li>Tag will always be changed to Quarantine and filters not supporting Quarantine will be set to Block instead</li>
     </ul>
+
+    <br>
+    <span style="font-size: small; float: left">Report bugs to
+        <a href="mailto:egillett@barracuda.com?Subject=FilterFixer Bug Report">egillett@barracuda.com</a></span>
 {% endblock %}
