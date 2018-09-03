@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # FilterFixer
 # Author: Eric Gillett <egillett@barracuda.com>
-# Version: 1.8
+# Version: 1.9
 # TODO change flask to return/accept JSON
+# TODO: break remove_dupes function down into simpler functions
 
 import re
 
@@ -11,11 +12,6 @@ def deduplicate(filters):
     my_list = filters.splitlines()
     output, dupes, dupe_num = remove_dupes(my_list)
     return output, dupes, dupe_num
-
-
-def determine_type():
-    pass
-    return 0
 
 
 def generate_scope(scope):
@@ -33,14 +29,14 @@ def generate_scope(scope):
         scope_list.append('body')
         scope_count += 1
     scope_str = ','.join(scope_list)
-    if scope_count > 1:
-        scope_str = '"' + scope_str + '"'
+#    if scope_count > 1:
+#        scope_str = '"' + scope_str + '"'
 
     return scope_str
 
 
 def reduce_scope(scope):
-    scope_list = scope.strip('"').split(',')
+    scope_list = scope.split(',')
     subject, headers, body = 0, 0, 0
 
     for l in scope_list:
@@ -55,6 +51,8 @@ def reduce_scope(scope):
     return scope_tuple
 
 
+# Main dedupe function, called by almost everything else
+# Really need to split this into multiple functions
 def remove_dupes(filters):
     new, dupes = set(), set()
     output, esg_content_list, esg_attach_list, ess_content_list = [], [], [], []
@@ -117,7 +115,7 @@ def remove_dupes(filters):
 
         if pattern == '':
             continue
-        # hack to skip IP
+        # Deduping IPs with subnets takes more effort than I have right now
         elif ip.match(line):
             output.append(line)
         elif esg_content_filter:
@@ -249,6 +247,7 @@ def get_sorted(my_list):
         return output
 
 
+# Convert BESG action to BESS action where needed
 def change_action(my_list):
     replacements = {'whitelist': 'allow', 'tag': 'quarantine'}
     replaced = []
@@ -279,8 +278,6 @@ def ip_convert(filters):
     my_filters = filters.splitlines()
 
     for line in my_filters:
-        # Strip newline character
-        line = line.rstrip()
         match = ip.match(line)
 
         if match:
@@ -314,11 +311,10 @@ def sender_convert(filters):
 
     for line in my_filters:
         line = line.lower()
-        # Strip newline character
-        line = line.rstrip()
         if line.lower() == 'email address/domain,comment' or \
            line.lower() == 'email address/domain,comment,action':
             continue
+        # Must check for blocks first since allow pattern matches block pattern as well
         match = sender_block.match(line)
 
         if match:
@@ -360,7 +356,9 @@ def recip_convert(filters):
         if line == 'email address/domain,comment' or \
            line == 'email address/domain,action,comment':
             continue
+        # Must check for blocks first since allow pattern matches block pattern as well
         match = recip_block.match(line)
+
         if match:
             # Recipient blocks are not accepted
             continue
@@ -392,8 +390,6 @@ def content_convert(filters):
 
     for line in my_filters:
         line = line.lower()
-        # Strip newline character
-        line = line.rstrip()
         match = content.match(line)
 
         if match:
@@ -429,8 +425,6 @@ def attach_convert(filters):
 
     for line in my_filters:
         line = line.lower()
-        # Strip newline character
-        line = line.rstrip()
         match = attach.match(line)
 
         if match:
