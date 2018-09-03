@@ -4,6 +4,8 @@
 # Version: 1.9
 # TODO change flask to return/accept JSON
 # TODO: break remove_dupes function down into simpler functions
+# Known Issues: Content filters containing a comma in the pattern are not parsed correctly,
+#               will probably need to check for quotes around the pattern first
 
 import re
 
